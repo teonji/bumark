@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extName__",
+  "homepage_url": "http://localhost:8080/",
+  "description": "Simple temporary bookmark extension",
+  "default_locale": "en",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "*://*/"
+  ],
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "__MSG_extName__",
+    "default_icon": {
+      "19": "icons/19.png",
+      "38": "icons/38.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; img-src 'self' https: data:; style-src 'self' https://pro.fontawesome.com https://fonts.googleapis.com 'unsafe-inline'; font-src 'self' https://pro.fontawesome.com https://fonts.googleapis.com https://fonts.gstatic.com 'unsafe-inline'"
+  },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+W"
+      }
+    }
+  }
+}
