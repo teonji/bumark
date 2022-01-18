@@ -14,7 +14,7 @@ const fetchTabData = async (tab, tag, settings) => {
         try {
           const titleOgData = document.querySelector("meta[property='og:title']")
           const titleOgDataUrl = titleOgData ? titleOgData.getAttribute("content") : null
-          title = document.title || titleOgDataUrl
+          title = document.title || titleOgDataUrl || location.hostname
         } catch (e) {
           console.log('Error getting title', e)
         }
@@ -118,6 +118,11 @@ const getTabs = async (active = true, currentWindow = true) => {
   return chrome.tabs.query(queryOptions)
 }
 
+const arrayEquals = (a, b) => Array.isArray(a) &&
+  Array.isArray(b) &&
+  a.length === b.length &&
+  a.every((val, index) => val === b[index])
+
 browser.runtime.onMessage.addListener(async request => {
   switch (request.type) {
     case 'closeCurrentTab': {
@@ -150,6 +155,21 @@ browser.runtime.onMessage.addListener(async request => {
     case 'previewMark': {
       const tabs = await getTabs(true, true)
       return fetchTabData(tabs[0], null, request.settings)
+    }
+    case 'getInitialStorage': {
+      const storage = await chrome.storage.sync.get(['bumarks', 'settings'])
+      const bumarks = storage.bumarks || []
+      const settings = storage.settings || {}
+      if (!arrayEquals(Object.keys(request.settings), Object.keys(settings))) {
+        const newSett = { ...request.defaultSettings, ...settings }
+        Object.keys(newSett).forEach(k => settings[k] = newSett[k])
+        await chrome.storage.sync.set({ settings })
+      }
+      await updateBadge(bumarks.length ? bumarks.length.toString() : null, request.settings)
+      return {
+        bumarks,
+        settings,
+      }
     }
     case 'openOptions': {
       const url = await chrome.runtime.getURL('popup.html?show=list')

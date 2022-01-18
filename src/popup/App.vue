@@ -13,7 +13,7 @@ const search = ref('')
 const searchByTag = ref([])
 const show = ref('add') // add | list | settings
 const mark = ref(null)
-const markLoaded = ref(false)
+const loaded = ref(false)
 const dateFormats = ['DD-MM-YYYY', 'MM-DD-YYYY', 'YYYY-MM-DD']
 
 const searchInputRef = ref(null)
@@ -33,23 +33,18 @@ const listFiltered = computed(() => {
   )
 })
 
-const arrayEquals = (a, b) => Array.isArray(a) &&
-  Array.isArray(b) &&
-  a.length === b.length &&
-  a.every((val, index) => val === b[index])
-
 const openAllMarks = async () => await browser.runtime.sendMessage({ type: 'openAllMarks', links: list.value.map(l => l.url) })
 const openMark = async link => await browser.runtime.sendMessage({ type: 'openMark', link })
 
 const removeMark = async id => {
   if (confirm('Are you sure?')) {
-    list.value = await browser.runtime.sendMessage({ type: 'removeMark', id, settings: settings })
+    list.value = await browser.runtime.sendMessage({ type: 'removeMark', id, settings, })
     clearTag()
   }
 }
 
 const send = async type => {
-  const newList = await browser.runtime.sendMessage({ type, tag: tag.value, settings: settings })
+  const newList = await browser.runtime.sendMessage({ type, tag: tag.value, settings, })
   if (newList === 'ERROR_MAX') {
     alert('Max mark reached.')
   } else if (newList === 'ERROR_NOTHING') {
@@ -64,7 +59,7 @@ const clearTag = () => {
   tag.value = ''
 }
 const closeCurrentTab = async () => {
-  if (list.value.length < settings.max && mark.value && markLoaded.value) {
+  if (list.value.length < settings.max && mark.value && loaded.value) {
     await send('closeCurrentTab')
   }
 }
@@ -109,7 +104,7 @@ const setSettings = async (type, value) => {
   if (type === 'type') {
     await changeTypeView(value)
   }
-  await chrome.storage.sync.set({ settings: settings })
+  await chrome.storage.sync.set({ settings, })
 }
 
 onMounted(async () => {
@@ -118,22 +113,16 @@ onMounted(async () => {
     show.value = 'list'
   }
   try {
-    mark.value = await browser.runtime.sendMessage({ type: 'previewMark', settings: settings })
-    markLoaded.value = true
+    mark.value = await browser.runtime.sendMessage({ type: 'previewMark', settings, })
+    loaded.value = true
   } catch (e) {
     alert(e)
   }
   try {
-    const storage = await chrome.storage.sync.get(['bumarks', 'settings'])
-    list.value = storage.bumarks || []
-    if (!arrayEquals(Object.keys(settings), Object.keys(storage.settings || {}))) {
-      const newSett = { ...defaultSettings, ...storage.settings }
-      Object.keys(newSett).forEach(k => settings[k] = newSett[k])
-    } else {
-      Object.keys(storage.settings).forEach(k => settings[k] = storage.settings[k])
-    }
-    await changeTypeView(settings.type)
-    await chrome.storage.sync.set({ settings: settings })
+    const { bumarks, settings: settingsFromStorage } = await browser.runtime.sendMessage({ type: 'getInitialStorage', settings, defaultSettings })
+    list.value = bumarks
+    Object.keys(settingsFromStorage).forEach(k => settings[k] = settingsFromStorage[k])
+    await changeTypeView(settingsFromStorage.type)
   } catch (e) {
     alert(e)
   }
@@ -176,12 +165,12 @@ onMounted(async () => {
             <div class="flex-1 group">
               <div @click="closeCurrentTab"
                    class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 group-hover:text-indigo-500"
-                   :class="[list.length >= settings.max || (!mark && markLoaded) ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
+                   :class="[list.length >= settings.max || (!mark && loaded) ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
               >
                 <span class="block px-1 pt-1 pb-1">
                     <i class="far fa-flushed text-4xl pt-1 mb-1 block"></i>
                     <span class="block text-xs pb-2">Close Current tab</span>
-                    <span v-if="list.length < settings.max && mark && markLoaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
+                    <span v-if="list.length < settings.max && mark && loaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
                 </span>
               </div>
             </div>
@@ -209,12 +198,12 @@ onMounted(async () => {
                    ref="tagInputRef"
                    @keyup.enter="closeCurrentTab"
                    placeholder="Insert a tag"
-                   :disabled="list.length >= settings.max || (!mark && markLoaded)"
+                   :disabled="list.length >= settings.max || (!mark && loaded)"
                    class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900">
           </div>
         </div>
       </div>
-      <ul v-if="markLoaded && mark" class="flex justify-end mr-3 mb-3">
+      <ul v-if="loaded && mark" class="flex justify-end mr-3 mb-3">
         <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400' : 'bg-white']">
           <i class="far fa-th-large text-xl pt-1 mb-1 block" />
         </li>
@@ -222,11 +211,11 @@ onMounted(async () => {
           <i class="far fa-stream text-xl pt-1 mb-1 block" />
         </li>
       </ul>
-      <div v-if="mark && markLoaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
+      <div v-if="mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
         <component :is="typeView" v-bind="mark" :settings="settings" class="pb-4" />
       </div>
       <div v-else class="flex items-center justify-center px-5 text-gray-400">
-        <div v-if="markLoaded">
+        <div v-if="loaded">
           No preview available
         </div>
         <div v-else>
@@ -261,7 +250,7 @@ onMounted(async () => {
           <span class="ml-3">x</span>
         </button>
       </div>
-      <ul v-if="markLoaded" class="flex justify-end mr-3 mb-3">
+      <ul v-if="loaded" class="flex justify-end mr-3 mb-3">
         <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400' : 'bg-white']">
           <i class="far fa-th-large text-xl pt-1 mb-1 block" />
         </li>
