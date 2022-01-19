@@ -6,6 +6,7 @@
   "default_locale": "en",
   "permissions": [
     "storage",
+    "activeTab",
     "tabs",
     "scripting"
   ],
@@ -35,7 +36,8 @@
   "commands": {
     "_execute_action": {
       "suggested_key": {
-        "default": "Alt+W"
+        "default": "Ctrl+U",
+        "mac": "Command+U"
       }
     }
   }

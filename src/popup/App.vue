@@ -53,7 +53,6 @@ const removeMark = async id => {
 
 const send = async (type, data = {}) => {
   const newList = await browser.runtime.sendMessage({ type, tag: tag.value, settings, ...data })
-  alert(JSON.stringify(newList))
   if (newList === 'ERROR_MAX') {
     alert('Max mark reached.')
   } else if (newList === 'ERROR_NOTHING') {
@@ -347,7 +346,7 @@ onMounted(async () => {
       <div class="flex items-center justify-between px-5">
         <span class="text-gray-400 text-3xl">Shortcut popup</span>
         <div class="mb-3 xl:w-96 text-3xl text-gray-400">
-          Alt + w
+          Ctrl/Command + u
         </div>
       </div>
       <div class="flex items-center justify-center mt-12 text-gray-400">
