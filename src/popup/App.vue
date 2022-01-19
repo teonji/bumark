@@ -7,6 +7,7 @@ const defaultSettings = {
 }
 
 const settings = reactive(defaultSettings)
+const copiedAll = ref(false)
 const list = ref([])
 const tag = ref('')
 const search = ref('')
@@ -33,7 +34,14 @@ const listFiltered = computed(() => {
   )
 })
 
-const openAllMarks = async () => await browser.runtime.sendMessage({ type: 'openAllMarks', links: list.value.map(l => l.url) })
+const openSelectedMarks = async () => await browser.runtime.sendMessage({ type: 'openSelectedMarks', links: listFiltered.value.map(l => l.url) })
+const copySelectedMarks = () => {
+  navigator.clipboard.writeText(listFiltered.value.map(l => l.url).join("\n"))
+  copiedAll.value = true
+  setTimeout(() => {
+    copiedAll.value = false
+  }, 2000)
+}
 const openMark = async link => await browser.runtime.sendMessage({ type: 'openMark', link })
 
 const removeMark = async id => {
@@ -43,8 +51,9 @@ const removeMark = async id => {
   }
 }
 
-const send = async type => {
-  const newList = await browser.runtime.sendMessage({ type, tag: tag.value, settings, })
+const send = async (type, data = {}) => {
+  const newList = await browser.runtime.sendMessage({ type, tag: tag.value, settings, ...data })
+  alert(JSON.stringify(newList))
   if (newList === 'ERROR_MAX') {
     alert('Max mark reached.')
   } else if (newList === 'ERROR_NOTHING') {
@@ -66,9 +75,9 @@ const closeCurrentTab = async () => {
 const closeAllTabs = async () => {
   await send('closeAllTabs')
 }
-const clearMarks = async () => {
+const clearSelectedMarks = async () => {
   if (confirm('Are you sure?')) {
-    await send('clearMarks')
+    await send('clearSelectedMarks', { list: listFiltered.value.map(l => l.id) })
   }
 }
 const toggleTag = e => {
@@ -225,9 +234,9 @@ onMounted(async () => {
     </div>
     <div v-if="show === 'list'">
       <div class="flex items-center justify-between p-3">
-        <div @click="openAllMarks" class="text-gray-400 cursor-pointer">Open all {{ list.length }} marks</div>
+        <div @click="openSelectedMarks" class="text-gray-400 cursor-pointer">Open selected {{ listFiltered.length }} marks</div>
         <div @click="openOptions" class="md:hidden block text-gray-400 cursor-pointer">Open full page</div>
-        <div @click="clearMarks" class="text-gray-400 cursor-pointer">Clear all {{ list.length }} marks</div>
+        <div @click="clearSelectedMarks" class="text-gray-400 cursor-pointer">Clear selected {{ listFiltered.length }} marks</div>
       </div>
       <div class="flex items-center justify-center pb-3 px-3">
         <div class="w-full mx-auto">
@@ -250,14 +259,22 @@ onMounted(async () => {
           <span class="ml-3">x</span>
         </button>
       </div>
-      <ul v-if="loaded" class="flex justify-end mr-3 mb-3">
-        <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400' : 'bg-white']">
-          <i class="far fa-th-large text-xl pt-1 mb-1 block" />
-        </li>
-        <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400' : 'bg-white']">
-          <i class="far fa-stream text-xl pt-1 mb-1 block" />
-        </li>
-      </ul>
+      <div class="flex justify-between items-center mb-3">
+        <button @click="copySelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center"
+                :class="[copiedAll ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-gray-400 hover:text-gray-500 hover:bg-gray-100 bg-white opacity-70']">
+          <i class="fas fa-copy"></i>
+          <span v-if="copiedAll" class="ml-2">Copied</span>
+          <span v-else class="ml-2">Copy selected {{ listFiltered.length }} marks</span>
+        </button>
+        <ul v-if="loaded" class="flex justify-end mr-3">
+          <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400' : 'bg-white']">
+            <i class="far fa-th-large text-xl pt-1 mb-1 block" />
+          </li>
+          <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400' : 'bg-white']">
+            <i class="far fa-stream text-xl pt-1 mb-1 block" />
+          </li>
+        </ul>
+      </div>
       <div class="grid md:grid-cols-3 grid-cols-1 lg:gap-3 gap-1 px-3">
         <component :is="typeView"
                    v-for="(l, i) in listFiltered"

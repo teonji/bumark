@@ -19,9 +19,9 @@ const fetchTabData = async (tab, tag, settings) => {
           if (img) {
             if (img.startsWith('//')) {
               img = `https:${img}`
-            } else if (icon.startsWith('/')) {
+            } else if (img.startsWith('/')) {
               img = `${base || url}${img}`
-            } else if (!icon.startsWith('http')) {
+            } else if (!img.startsWith('http')) {
               img = `${base || url}${img}`
             }
           }
@@ -31,7 +31,7 @@ const fetchTabData = async (tab, tag, settings) => {
         const hostSplit = document.location.hostname.split('.')
         const provider = hostSplit[hostSplit.length - 2]
 
-        const url = window.location.href
+        const url = `${window.location.origin}/`
 
         let title = null
         try {
@@ -56,8 +56,6 @@ const fetchTabData = async (tab, tag, settings) => {
           console.log('Error getting description', e)
         }
 
-        // const meta = Array.from(document.querySelectorAll('meta')).reduce((acc, meta) => (Object.assign(acc, { [meta.name || meta.getAttribute("itemprop")]: meta.content })), {})
-
         let image = null
         let icon = null
         try {
@@ -66,13 +64,16 @@ const fetchTabData = async (tab, tag, settings) => {
 
           image = getDomQueries([
             ["meta[property='og:image']", "content"],
-            ["meta[name='twitter:image']", "content"]
+            ["meta[name='twitter:image']", "content"],
           ])
           image = fixImageUrl(image, base, url)
 
           icon = getDomQueries([
             ["link[rel='icon']", "href"],
-            ["link[rel='shortcut icon']", "href"]
+            ["link[rel='shortcut icon']", "href"],
+            ["link[rel='apple-touch-icon']", "href"],
+            ["link[rel='apple-touch-icon-precomposed']", "href"],
+            ["meta[itemprop='image']", "content"],
           ])
           icon = fixImageUrl(icon, base, url)
         } catch (e) {
@@ -146,6 +147,12 @@ const closeAndSaveTabs = async (tabs, tag, settings) => {
   }
   return list
 }
+const clearSelectedMarks = async list => {
+  const storage = await chrome.storage.sync.get(['bumarks'])
+  const bumarks = (storage.bumarks || []).filter(f => !list.includes(f.id))
+  await chrome.storage.sync.set({ bumarks })
+  return bumarks
+}
 
 const getTabs = async (active = true, currentWindow = true) => {
   let queryOptions = {
@@ -170,12 +177,10 @@ browser.runtime.onMessage.addListener(async request => {
       const allTabs = await getTabs(false, true)
       return closeAndSaveTabs(allTabs, request.tag, request.settings)
     }
-    case 'clearMarks': {
-      await chrome.storage.sync.set({ bumarks: [] })
-      await updateBadge(null, request.settings)
-      return []
+    case 'clearSelectedMarks': {
+      return clearSelectedMarks(request.list)
     }
-    case 'openAllMarks': {
+    case 'openSelectedMarks': {
       const links = (request.links || []).map(link => chrome.tabs.create({ url: link }))
       await Promise.all(links)
       return true
