@@ -347,7 +347,7 @@ onMounted(async () => {
       <div class="flex items-center justify-between px-5">
         <span class="text-gray-400 text-3xl">Shortcut popup</span>
         <div class="mb-3 xl:w-96 text-3xl text-gray-400">
-          Ctrl/Command + u
+          Ctrl+u / Cmd+u
         </div>
       </div>
       <div class="flex items-center justify-center mt-12 text-gray-400">
