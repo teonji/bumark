@@ -82,7 +82,7 @@ const copy = () => {
     <div class="p-8">
       <div class="justify-between flex">
         <div>
-          <h5 @click="open" class="text-xl font-bold text-gray-100 pb-2" :class="{ 'cursor-pointer': canEdit }">
+          <h5 @click="open" class="text-xl font-bold text-gray-100 pb-4" :class="{ 'cursor-pointer': canEdit }">
             {{ title }}
           </h5>
           <button v-for="(t, i) in tags"
@@ -104,7 +104,7 @@ const copy = () => {
         </p>
       </div>
 
-      <dl class="flex mt-6">
+      <dl class="flex mt-6 justify-between">
         <div v-if="canEdit" class="flex flex-col-reverse">
           <dt class="text-sm font-medium text-gray-400">{{ dateFormatted }}</dt>
           <dd class="text-xs text-gray-300">Saved</dd>

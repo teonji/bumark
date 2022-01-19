@@ -145,11 +145,11 @@ onMounted(async () => {
       </div>
 
       <ul class="flex">
-        <li v-if="list.length || show === 'settings'" @click="setShow('add')" class="flex justify-between items-center px-2 rounded-l-lg cursor-pointer" :class="[show === 'add' ? 'bg-blue-400' : 'bg-white']">
+        <li v-if="list.length || show === 'settings'" @click="setShow('add')" class="flex justify-between items-center px-2 rounded-l-lg cursor-pointer sm:hidden" :class="[show === 'add' ? 'bg-blue-400 text-white' : 'bg-white']">
           <i class="far fa-plus text-xl pt-1 mb-1 block px-3" />
           <span class="px-3">Add</span>
         </li>
-        <li v-if="list.length" @click="setShow('list')" class="flex justify-between items-center px-2 rounded-r-lg cursor-pointer" :class="[show === 'list' ? 'bg-blue-400' : 'bg-white']">
+        <li v-if="list.length" @click="setShow('list')" class="flex justify-between items-center px-2 rounded-r-lg cursor-pointer sm:rounded-lg" :class="[show === 'list' ? 'bg-blue-400 text-white' : 'bg-white']">
           <i class="far fa-list text-xl pt-1 mb-1 block px-3" />
           <span class="px-3">List ({{ list.length }})</span>
         </li>
@@ -158,7 +158,7 @@ onMounted(async () => {
       <div class="flex justify-end items-center relative">
         <div class="flex items-center">
           <div class="block relative">
-            <button @click="setShow('settings')" type="button" class="inline-block py-1 px-3 hover:bg-gray-200 rounded-full relative ml-2" :class="{ 'bg-blue-400': show === 'settings' }">
+            <button @click="setShow('settings')" type="button" class="inline-block py-1 px-3 hover:bg-gray-200 rounded-full relative ml-2" :class="{ 'bg-blue-400 text-white': show === 'settings' }">
               <i class="far fa-cog text-xl pt-1 mb-1 block" />
             </button>
           </div>
@@ -212,10 +212,10 @@ onMounted(async () => {
         </div>
       </div>
       <ul v-if="loaded && mark" class="flex justify-end mr-3 mb-3">
-        <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400' : 'bg-white']">
+        <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
           <i class="far fa-th-large text-xl pt-1 mb-1 block" />
         </li>
-        <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400' : 'bg-white']">
+        <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
           <i class="far fa-stream text-xl pt-1 mb-1 block" />
         </li>
       </ul>
@@ -231,11 +231,12 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-    <div v-if="show === 'list'">
+    <div v-if="show === 'list'" class="container mx-auto">
       <div class="flex items-center justify-between p-3">
-        <div @click="openSelectedMarks" class="text-gray-400 cursor-pointer">Open selected {{ listFiltered.length }} marks</div>
+
+        <div @click="openSelectedMarks" class="text-gray-400 cursor-pointer">Open {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</div>
         <div @click="openOptions" class="md:hidden block text-gray-400 cursor-pointer">Open full page</div>
-        <div @click="clearSelectedMarks" class="text-gray-400 cursor-pointer">Clear selected {{ listFiltered.length }} marks</div>
+        <div @click="clearSelectedMarks" class="text-gray-400 cursor-pointer">Clear {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</div>
       </div>
       <div class="flex items-center justify-center pb-3 px-3">
         <div class="w-full mx-auto">
@@ -263,13 +264,13 @@ onMounted(async () => {
                 :class="[copiedAll ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-gray-400 hover:text-gray-500 hover:bg-gray-100 bg-white opacity-70']">
           <i class="fas fa-copy"></i>
           <span v-if="copiedAll" class="ml-2">Copied</span>
-          <span v-else class="ml-2">Copy selected {{ listFiltered.length }} marks</span>
+          <span v-else class="ml-2">Copy {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</span>
         </button>
         <ul v-if="loaded" class="flex justify-end mr-3">
-          <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400' : 'bg-white']">
+          <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
             <i class="far fa-th-large text-xl pt-1 mb-1 block" />
           </li>
-          <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400' : 'bg-white']">
+          <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
             <i class="far fa-stream text-xl pt-1 mb-1 block" />
           </li>
         </ul>
