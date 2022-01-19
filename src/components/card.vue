@@ -110,7 +110,7 @@ const copy = () => {
           <dd class="text-xs text-gray-300">Saved</dd>
         </div>
 
-        <div v-if="provider" class="flex flex-col-reverse ml-3 sm:ml-6">
+        <div v-if="provider" class="flex flex-col-reverse" :class="{'ml-3 sm:ml-6': canEdit}">
           <dt class="text-sm font-medium text-gray-400">{{ provider }}</dt>
           <dd class="text-xs text-gray-300">Provider</dd>
         </div>

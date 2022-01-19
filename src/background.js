@@ -7,13 +7,39 @@ const fetchTabData = async (tab, tag, settings) => {
     const res = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
       func: () => {
+        const _getDomQuery = (selectors, name) => {
+          const data = document.querySelector(selectors)
+          return data ? data.getAttribute(name) : null
+        }
+        const getDomQueries = rules => {
+          const resolved = rules.map(rule => _getDomQuery(rule[0], rule[1])).filter(f => !!f)
+          return resolved && resolved.length > 0 ? resolved[0] : null
+        }
+        const fixImageUrl = (img, base, url) => {
+          if (img) {
+            if (img.startsWith('//')) {
+              img = `https:${img}`
+            } else if (icon.startsWith('/')) {
+              img = `${base || url}${img}`
+            } else if (!icon.startsWith('http')) {
+              img = `${base || url}${img}`
+            }
+          }
+          return img
+        }
+
         const hostSplit = document.location.hostname.split('.')
         const provider = hostSplit[hostSplit.length - 2]
 
+        const url = window.location.href
+
         let title = null
         try {
-          const titleOgData = document.querySelector("meta[property='og:title']")
-          const titleOgDataUrl = titleOgData ? titleOgData.getAttribute("content") : null
+          const titleOgDataUrl = getDomQueries([
+            ["meta[property='og:title']", "content"],
+            ["meta[name='twitter:title']", "content"],
+            ["meta[name='title']", "content"]
+          ])
           title = document.title || titleOgDataUrl || location.hostname
         } catch (e) {
           console.log('Error getting title', e)
@@ -21,30 +47,41 @@ const fetchTabData = async (tab, tag, settings) => {
 
         let description = null
         try {
-          const descriptionData = document.querySelector("meta[name='description']")
-          const descriptionOgData = document.querySelector("meta[property='og:image']")
-          const descriptionDataUrl = descriptionData ? descriptionData.getAttribute("content") : null
-          const descriptionOgDataUrl = descriptionOgData ? descriptionOgData.getAttribute("content") : null
-          description = descriptionDataUrl || descriptionOgDataUrl
+          description = getDomQueries([
+            ["meta[name='description']", "content"],
+            ["meta[property='og:description']", "content"],
+            ["meta[name='twitter:description']", "content"]
+          ])
         } catch (e) {
           console.log('Error getting description', e)
         }
 
+        // const meta = Array.from(document.querySelectorAll('meta')).reduce((acc, meta) => (Object.assign(acc, { [meta.name || meta.getAttribute("itemprop")]: meta.content })), {})
+
         let image = null
         let icon = null
         try {
-          const imageData = document.querySelector("meta[property='og:image']")
-          image = imageData ? imageData.getAttribute("content") : null
+          const baseData = document.querySelector("base")
+          const base = baseData ? baseData.getAttribute("href") : ''
 
-          const iconData = document.querySelector("link[rel='icon']")
-          icon = iconData ? iconData.getAttribute("href") : null
+          image = getDomQueries([
+            ["meta[property='og:image']", "content"],
+            ["meta[name='twitter:image']", "content"]
+          ])
+          image = fixImageUrl(image, base, url)
+
+          icon = getDomQueries([
+            ["link[rel='icon']", "href"],
+            ["link[rel='shortcut icon']", "href"]
+          ])
+          icon = fixImageUrl(icon, base, url)
         } catch (e) {
           console.log('Error getting images', e)
         }
 
         return {
           title,
-          url: document.location.href,
+          url,
           description,
           icon,
           image,
