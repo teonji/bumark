@@ -1,4 +1,5 @@
 <script setup>
+import customSelect from '../components/custom-select.vue'
 import dayjs from 'dayjs'
 import {ref, defineProps, defineEmits, computed} from 'vue'
 const props = defineProps({
@@ -26,6 +27,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  categories: {
+    type: Array,
+    default: () => []
+  },
   provider: {
     type: String,
     default: null
@@ -42,17 +47,27 @@ const props = defineProps({
     type: String,
     default: null
   },
+  category: {
+    type: String,
+    default: null
+  },
+  notes: {
+    type: String,
+    default: null
+  },
   canEdit: {
     type: Boolean,
     default: false
   },
 })
 const dateFormatted = computed(() => dayjs(props.date).format(props.settings.dateFormat))
-const emit = defineEmits(['open', 'remove'])
+const emit = defineEmits(['open', 'tag', 'remove', 'change'])
 const copied = ref(false)
 const open = () => props.canEdit ? emit('open', props.url) : null
 const remove = () => emit('remove', props.id)
 const toggleTag = tag => emit('tag', tag)
+const change = (id, name, value) => emit('change', { id, name, value })
+const changeCategory = category => change(props.id, 'category', category)
 const copy = () => {
   navigator.clipboard.writeText(props.url)
   copied.value = true
@@ -114,8 +129,18 @@ const copy = () => {
           <dt class="text-sm font-medium text-gray-400">{{ provider }}</dt>
           <dd class="text-xs text-gray-300">Provider</dd>
         </div>
-
       </dl>
+
+      <div v-if="notes" class="flex w-full mt-4 relative">
+        Notes: {{ notes }}
+      </div>
+      <div class="flex w-full mt-4 relative">
+        <custom-select
+            :list="categories"
+            :value="category"
+            @change="changeCategory"
+        />
+      </div>
     </div>
   </div>
 </template>

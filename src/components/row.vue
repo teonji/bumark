@@ -1,5 +1,5 @@
 <script setup>
-// import dayjs from 'dayjs'
+import customSelect from '../components/custom-select.vue'
 import {ref, defineProps, defineEmits, /*computed*/} from 'vue'
 const props = defineProps({
   id: {
@@ -26,6 +26,10 @@ const props = defineProps({
     type: Object,
     required: true
   },
+  categories: {
+    type: Array,
+    default: () => []
+  },
   provider: {
     type: String,
     default: null
@@ -42,17 +46,27 @@ const props = defineProps({
     type: String,
     default: null
   },
+  category: {
+    type: String,
+    default: null
+  },
+  notes: {
+    type: String,
+    default: null
+  },
   canEdit: {
     type: Boolean,
     default: false
   },
 })
 // const dateFormatted = computed(() => dayjs(props.date).format(props.settings.dateFormat))
-const emit = defineEmits(['open', 'remove'])
+const emit = defineEmits(['open', 'tag', 'remove', 'change'])
 const copied = ref(false)
 const open = () => props.canEdit ? emit('open', props.url) : null
 const remove = () => emit('remove', props.id)
 const toggleTag = tag => emit('tag', tag)
+const change = (id, name, value) => emit('change', { id, name, value })
+const changeCategory = category => change(props.id, 'category', category)
 const copy = () => {
   navigator.clipboard.writeText(props.url)
   copied.value = true
@@ -81,18 +95,23 @@ const copy = () => {
           </span>
         </div>
         <div class="flex">
-          <div class="h-32 w-32 mb-0">
-            <div @click="open" :class="{ 'cursor-pointer': canEdit }">
-              <img :src="image || icon" :alt="title" class="w-32 h-32 object-cover rounded-2xl">
+          <div class="mb-0">
+            <div @click="open" class="h-[120px] w-[120px]" :class="{ 'cursor-pointer': canEdit }">
+              <img :src="icon || image || '/logo.png'" :alt="title" class="h-[120px] w-[120px] object-cover rounded-2xl">
             </div>
+            <custom-select
+                :list="categories"
+                :value="category"
+                @change="changeCategory"
+            />
           </div>
-          <div class="flex-auto ml-5 flex-grow">
+          <div class="flex-auto ml-5">
             <div @click="open" v-if="title || description" class="flex items-center justify-between mt-2 mb-2" :class="{ 'cursor-pointer': canEdit }">
               <div class="flex items-center">
                 <div class="flex flex-col">
-                  <div v-if="title" class="w-full flex-none text-lg text-gray-800 font-bold leading-none">{{ title }}</div>
-                  <div v-if="description" class="flex-auto text-gray-500 my-1">
-                    <span class="mr-3">{{ description }}</span>
+                  <div v-if="title" class="w-full flex-none text-lg text-gray-800 font-bold leading-none min-h-[40px]">{{ title }}</div>
+                  <div class="flex-auto text-gray-500 my-1 min-h-[60px]">
+                    <span class="mr-3">{{ description || '(No description)' }}</span>
                   </div>
                 </div>
               </div>
@@ -103,14 +122,9 @@ const copy = () => {
                     class="bg-blue-600 px-2 py-1 mr-2 mb-2 text-sm shadow-sm font-medium tracking-wider text-blue-100 rounded-full hover:shadow-2xl hover:bg-blue-700">
               {{ t }}
             </button>
-            <!--<div @click="open" class="flex text-sm text-gray-500" :class="{ 'cursor-pointer': canEdit }">
-              <div class="flex-1 inline-flex items-center">
-                <p>{{ dateFormatted }}</p>
-              </div>
-              <div class="flex-1 inline-flex items-center">
-                <p class="">{{ provider }}</p>
-              </div>
-            </div>-->
+            <div v-if="notes">
+              Notes: {{ notes }}
+            </div>
           </div>
         </div>
       </div>

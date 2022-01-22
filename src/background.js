@@ -2,7 +2,7 @@ const dayjs = require('dayjs')
 
 const closeTabs = async tabs => tabs.forEach(tab => chrome.tabs.remove(tab.id))
 
-const fetchTabData = async (tab, tag, settings) => {
+const fetchTabData = async (tab, tag, category, notes, settings) => {
   try {
     const res = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -92,6 +92,8 @@ const fetchTabData = async (tab, tag, settings) => {
     })
     const metadata = res[0].result
     metadata.id = crypto.randomUUID()
+    metadata.category = category
+    metadata.notes = notes
     metadata.date = dayjs().format('YYYY-MM-DD hh:mm')
     metadata.tags = [tag, metadata.provider, dayjs().format(settings.dateFormat)].filter(f => !!f)
     return metadata
@@ -134,8 +136,8 @@ const removeFromList = async id => {
   return bumarks
 }
 
-const closeAndSaveTabs = async (tabs, tag, settings) => {
-  const data = tabs.map(t => fetchTabData(t, tag, settings))
+const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
+  const data = tabs.map(t => fetchTabData(t, tag, category, notes, settings))
   const resolvedData = await Promise.all(data)
   const listData = resolvedData.filter(f => !!f)
   let list = await updateList(listData, settings)
@@ -162,6 +164,32 @@ const getTabs = async (active = true, currentWindow = true) => {
   return chrome.tabs.query(queryOptions)
 }
 
+const addCategory = async category => {
+  const storage = await chrome.storage.sync.get(['settings'])
+  const settings = { ...storage.settings }
+  const categories = settings.categories || []
+  categories.push(category)
+  settings.categories = categories
+  await chrome.storage.sync.set({ settings })
+  return settings
+}
+const removeCategory = async id => {
+  const storage = await chrome.storage.sync.get(['settings', 'bumarks'])
+  const settings = storage.settings
+  const bumarks = (storage.bumarks || []).map(b => {
+    if (b.category === id) {
+      b.category = null
+    }
+    return b
+  })
+  settings.categories = settings.categories.filter(cat => cat.id !== id)
+  await chrome.storage.sync.set({ settings, bumarks })
+  return {
+    settings,
+    bumarks,
+  }
+}
+
 const arrayEquals = (a, b) => Array.isArray(a) &&
   Array.isArray(b) &&
   a.length === b.length &&
@@ -171,11 +199,11 @@ browser.runtime.onMessage.addListener(async request => {
   switch (request.type) {
     case 'closeCurrentTab': {
       const currentTabs = await getTabs(true, true)
-      return closeAndSaveTabs(currentTabs, request.tag, request.settings)
+      return closeAndSaveTabs(currentTabs, request.tag, request.category, request.notes, request.settings)
     }
     case 'closeAllTabs': {
       const allTabs = await getTabs(false, true)
-      return closeAndSaveTabs(allTabs, request.tag, request.settings)
+      return closeAndSaveTabs(allTabs, request.tag, request.category, request.notes, request.settings)
     }
     case 'clearSelectedMarks': {
       return clearSelectedMarks(request.list)
@@ -194,9 +222,26 @@ browser.runtime.onMessage.addListener(async request => {
       await updateBadge(list.length ? list.length.toString() : null, request.settings)
       return list
     }
+    case 'changeMark': {
+      const storage = await chrome.storage.sync.get(['bumarks'])
+      const bumarks = (storage.bumarks || []).map(b => {
+        if (b.id === request.id) {
+          b[request.name] = request.value
+        }
+        return b
+      })
+      await chrome.storage.sync.set({ bumarks })
+      return bumarks
+    }
     case 'previewMark': {
       const tabs = await getTabs(true, true)
-      return fetchTabData(tabs[0], null, request.settings)
+      return fetchTabData(tabs[0], null, null, null, request.settings)
+    }
+    case 'addCategory': {
+      return addCategory(request.category)
+    }
+    case 'removeCategory': {
+      return removeCategory(request.id)
     }
     case 'getInitialStorage': {
       const storage = await chrome.storage.sync.get(['bumarks', 'settings'])

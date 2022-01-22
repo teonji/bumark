@@ -1,15 +1,37 @@
 <script setup>
+import customSelect from '../components/custom-select.vue'
 import { ref, shallowRef, reactive, computed, onMounted, defineAsyncComponent, } from 'vue'
 const defaultSettings = {
-  type: 'card',
+  type: 'row',
   max: 100,
   dateFormat: 'DD-MM-YYYY',
+  categories: [],
+}
+const emptyCategory = {
+  id: null,
+  label: 'Nothing',
+  color: 'blue-500',
+  icon: 'ban',
+}
+const addCategory = {
+  id: 'ADD',
+  label: 'Add',
+  color: 'blue-500',
+  icon: 'plus',
 }
 
 const settings = reactive(defaultSettings)
 const copiedAll = ref(false)
 const list = ref([])
 const tag = ref('')
+const category = ref(emptyCategory.id)
+const categoryAddMode = ref(false)
+const categoryToAdd = reactive({
+  label: '',
+  color: 'blue-500',
+  icon: 'ban',
+})
+const notes = ref('')
 const search = ref('')
 const searchByTag = ref([])
 const show = ref('add') // add | list | settings
@@ -17,13 +39,24 @@ const mark = ref(null)
 const loaded = ref(false)
 const dateFormats = ['DD-MM-YYYY', 'MM-DD-YYYY', 'YYYY-MM-DD']
 
+const settingsCategoriesToAdd = computed(() => {
+  return [
+    emptyCategory,
+    ...(settings.categories.length ? settings.categories : []),
+    addCategory,
+  ]
+})
+const settingsCategories = computed(() => settingsCategoriesToAdd.value.filter(c => c.id !== 'ADD'))
+
 const searchInputRef = ref(null)
 const tagInputRef = ref(null)
 
 const typeView = shallowRef(defineAsyncComponent(() => import(`../components/${settings.type}.vue`)))
 
 const listFiltered = computed(() => {
-  const listData = list.value.filter(l => searchByTag.value.length === 0 || l.tags.some(t => searchByTag.value.includes(t)))
+  const listData = list.value
+      .filter(l => searchByTag.value.length === 0 || l.tags.some(t => searchByTag.value.includes(t)))
+      .filter(l => category.value === null || l.category === category.value)
   if (search.value === '') {
     return listData
   }
@@ -31,6 +64,8 @@ const listFiltered = computed(() => {
     || (l.description || '').toLowerCase().includes(search.value.toLowerCase())
     || (l.provider || '').toLowerCase().includes(search.value.toLowerCase())
     || (l.tags || []).includes(search.value.toLowerCase())
+    || (l.notes || '').includes(search.value.toLowerCase())
+    || (l.category || '').includes(search.value.toLowerCase())
   )
 })
 
@@ -51,8 +86,24 @@ const removeMark = async id => {
   }
 }
 
+const changeMark = async ({ id, name, value }) => {
+  list.value = await browser.runtime.sendMessage({
+    type: 'changeMark',
+    id,
+    name,
+    value,
+  })
+}
+
 const send = async (type, data = {}) => {
-  const newList = await browser.runtime.sendMessage({ type, tag: tag.value, settings, ...data })
+  const newList = await browser.runtime.sendMessage({
+    type,
+    tag: tag.value,
+    category: category.value,
+    notes: notes.value,
+    settings,
+    ...data,
+  })
   if (newList === 'ERROR_MAX') {
     alert('Max mark reached.')
   } else if (newList === 'ERROR_NOTHING') {
@@ -115,6 +166,38 @@ const setSettings = async (type, value) => {
   await chrome.storage.sync.set({ settings, })
 }
 
+const changeCategory = val => {
+  category.value = val
+  if (val === 'ADD') {
+    categoryAddMode.value = !categoryAddMode.value
+  }
+}
+const clearAddCategory = () => {
+  categoryAddMode.value = !categoryAddMode.value
+  categoryToAdd.label = ''
+  categoryToAdd.icon = emptyCategory.icon
+  categoryToAdd.color = emptyCategory.color
+}
+
+const removeCategory = async id => {
+  const data = await browser.runtime.sendMessage({ type: 'removeCategory', id, })
+  Object.keys(data.settings).forEach(k => settings[k] = data.settings[k])
+  list.value = data.bumarks
+}
+
+const toggleCancelCategory = async () => {
+  category.value = emptyCategory.id
+  clearAddCategory()
+}
+const toggleAddCategory = async () => {
+  const cat = categoryToAdd
+  cat.id = crypto.randomUUID()
+  const setts = await browser.runtime.sendMessage({ type: 'addCategory', category: cat, })
+  category.value = cat.id
+  Object.keys(setts).forEach(k => settings[k] = setts[k])
+  clearAddCategory()
+}
+
 onMounted(async () => {
   tagInputRef.value.focus()
   if (location.search === '?show=list') {
@@ -165,7 +248,6 @@ onMounted(async () => {
         </div>
       </div>
     </nav>
-
     <div v-if="show === 'add'">
       <div class="flex items-center justify-center px-5">
         <div class="w-full max-w-md mx-auto">
@@ -194,14 +276,21 @@ onMounted(async () => {
           </div>
         </div>
       </div>
-      <div class="flex items-center justify-center container m-auto pb-3 px-3">
-        <div class="w-full mx-auto">
+      <div v-if="!categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
+        <custom-select
+            :list="settingsCategoriesToAdd"
+            :value="category"
+            :can-remove="true"
+            @change="changeCategory"
+            @remove="removeCategory"
+        />
+        <div class="w-full mx-auto ml-3">
           <div class="relative text-gray-600 focus-within:text-gray-400">
-          <span class="absolute inset-y-0 left-0 flex items-center pl-2">
-            <button type="submit" class="p-1 focus:outline-none focus:shadow-outline">
-              <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </button>
-          </span>
+            <span class="absolute inset-y-0 left-0 flex items-center pl-2">
+              <button type="submit" class="p-1 focus:outline-none focus:shadow-outline">
+                <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              </button>
+            </span>
             <input v-model="tag"
                    ref="tagInputRef"
                    @keyup.enter="closeCurrentTab"
@@ -211,18 +300,62 @@ onMounted(async () => {
           </div>
         </div>
       </div>
+
+      <div v-if="!categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
+        <div class="w-full mx-auto">
+          <div class="relative text-gray-600 focus-within:text-gray-400">
+            <textarea v-model="notes"
+                      placeholder="Insert notes"
+                      :disabled="list.length >= settings.max || (!mark && loaded)"
+                      class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-4 focus:outline-none focus:bg-white focus:text-gray-900" />
+          </div>
+        </div>
+      </div>
+
+      <div v-if="categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
+        <div class="flex w-full">
+          <div class="flex w-full w-[90px] mr-2">
+            <custom-select
+                class="mr-2"
+                category="color"
+                :value="categoryToAdd.color"
+                @change="color => categoryToAdd.color = color"
+            />
+            <custom-select
+                category="icon"
+                :value="categoryToAdd.icon"
+                @change="icon => categoryToAdd.icon = icon"
+            />
+          </div>
+          <input v-model="categoryToAdd.label"
+                 placeholder="Insert label"
+                 class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-4 focus:outline-none focus:bg-white mr-2 focus:text-gray-900"
+          />
+          <div class="flex w-[90px] mr-2">
+            <button :disabled="categoryToAdd.label === ''"
+                    class="font-bold text-white p-2 transition duration-300 ease-in-out mr-2 rounded"
+                    :class="[categoryToAdd.label === '' ? 'bg-blue-300 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600 cursor-pointer']"
+                    @click="toggleAddCategory"
+            >
+              OK
+            </button>
+            <button class="bg-gray-500 font-bold text-white p-2 transition duration-300 ease-in-out hover:bg-gray-600 rounded" @click="toggleCancelCategory">Cancel</button>
+          </div>
+        </div>
+      </div>
+
       <ul v-if="loaded && mark" class="flex justify-end mr-3 mb-3">
-        <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
-          <i class="far fa-th-large text-xl pt-1 mb-1 block" />
-        </li>
-        <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
+        <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
           <i class="far fa-stream text-xl pt-1 mb-1 block" />
+        </li>
+        <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
+          <i class="far fa-th-large text-xl pt-1 mb-1 block" />
         </li>
       </ul>
       <div v-if="mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
         <component :is="typeView" v-bind="mark" :settings="settings" class="pb-4" />
       </div>
-      <div v-else class="flex items-center justify-center px-5 text-gray-400">
+      <div v-else-if="!categoryAddMode" class="flex items-center justify-center px-5 text-gray-400">
         <div v-if="loaded">
           No preview available
         </div>
@@ -233,7 +366,6 @@ onMounted(async () => {
     </div>
     <div v-if="show === 'list'" class="container mx-auto">
       <div class="flex items-center justify-between p-3">
-
         <div @click="openSelectedMarks" class="text-gray-400 cursor-pointer">Open {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</div>
         <div @click="openOptions" class="md:hidden block text-gray-400 cursor-pointer">Open full page</div>
         <div @click="clearSelectedMarks" class="text-gray-400 cursor-pointer">Clear {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</div>
@@ -266,12 +398,18 @@ onMounted(async () => {
           <span v-if="copiedAll" class="ml-2">Copied</span>
           <span v-else class="ml-2">Copy {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</span>
         </button>
+        <custom-select
+            v-if="settingsCategories.length > 1"
+            :list="settingsCategories"
+            :value="category"
+            @change="changeCategory"
+        />
         <ul v-if="loaded" class="flex justify-end mr-3">
-          <li @click="setSettings('type', 'card')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
-            <i class="far fa-th-large text-xl pt-1 mb-1 block" />
-          </li>
-          <li @click="setSettings('type', 'row')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
+          <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
             <i class="far fa-stream text-xl pt-1 mb-1 block" />
+          </li>
+          <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
+            <i class="far fa-th-large text-xl pt-1 mb-1 block" />
           </li>
         </ul>
       </div>
@@ -282,8 +420,10 @@ onMounted(async () => {
                    v-bind="l"
                    can-edit
                    :settings="settings"
+                   :categories="settingsCategories"
                    @open="openMark"
                    @remove="removeMark"
+                   @change="changeMark"
                    @tag="toggleTag"
         />
       </div>
