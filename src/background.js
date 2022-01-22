@@ -140,6 +140,7 @@ const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
   const data = tabs.map(t => fetchTabData(t, tag, category, notes, settings))
   const resolvedData = await Promise.all(data)
   const listData = resolvedData.filter(f => !!f)
+  debugger
   let list = await updateList(listData, settings)
   if (Array.isArray(list)) {
     await closeTabs(tabs)
@@ -166,9 +167,11 @@ const getTabs = async (active = true, currentWindow = true) => {
 
 const addCategory = async category => {
   const storage = await chrome.storage.sync.get(['settings'])
-  const settings = { ...storage.settings }
-  const categories = settings.categories || []
+  const settings = storage.settings
+  let categories = settings.categories || []
+  debugger
   categories.push(category)
+  debugger
   settings.categories = categories
   await chrome.storage.sync.set({ settings })
   return settings
@@ -183,6 +186,7 @@ const removeCategory = async id => {
     return b
   })
   settings.categories = settings.categories.filter(cat => cat.id !== id)
+  debugger
   await chrome.storage.sync.set({ settings, bumarks })
   return {
     settings,
@@ -193,7 +197,7 @@ const removeCategory = async id => {
 const arrayEquals = (a, b) => Array.isArray(a) &&
   Array.isArray(b) &&
   a.length === b.length &&
-  a.every((val, index) => val === b[index])
+  a.sort().every((val, index) => val === b.sort()[index])
 
 browser.runtime.onMessage.addListener(async request => {
   switch (request.type) {
@@ -247,12 +251,17 @@ browser.runtime.onMessage.addListener(async request => {
       const storage = await chrome.storage.sync.get(['bumarks', 'settings'])
       const bumarks = storage.bumarks || []
       const settings = storage.settings || {}
+      // if (!Array.isArray(settings.categories)) {
+      //   settings.categories = []
+      // }
       if (!arrayEquals(Object.keys(request.settings), Object.keys(settings))) {
         const newSett = { ...request.defaultSettings, ...settings }
         Object.keys(newSett).forEach(k => settings[k] = newSett[k])
+        debugger
         await chrome.storage.sync.set({ settings })
       }
-      await updateBadge(bumarks.length ? bumarks.length.toString() : null, request.settings)
+      debugger
+      await updateBadge(bumarks.length ? bumarks.length.toString() : null, settings)
       return {
         bumarks,
         settings,

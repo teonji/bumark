@@ -10,13 +10,13 @@ const defaultSettings = {
 const emptyCategory = {
   id: null,
   label: 'Nothing',
-  color: 'blue-500',
+  color: 'gray-500',
   icon: 'ban',
 }
 const addCategory = {
   id: 'ADD',
   label: 'Add',
-  color: 'blue-500',
+  color: 'gray-500',
   icon: 'plus',
 }
 
@@ -31,10 +31,13 @@ const categoryToAdd = reactive({
   color: 'blue-500',
   icon: 'ban',
 })
+const categorySelectOpen = ref(null)
 const notes = ref('')
 const search = ref('')
 const searchByTag = ref([])
 const show = ref('add') // add | list | settings
+
+// TODO: check ref?
 const mark = ref(null)
 const loaded = ref(false)
 const dateFormats = ['DD-MM-YYYY', 'MM-DD-YYYY', 'YYYY-MM-DD']
@@ -163,6 +166,7 @@ const setSettings = async (type, value) => {
   if (type === 'type') {
     await changeTypeView(value)
   }
+  debugger
   await chrome.storage.sync.set({ settings, })
 }
 
@@ -182,7 +186,20 @@ const clearAddCategory = () => {
 const removeCategory = async id => {
   const data = await browser.runtime.sendMessage({ type: 'removeCategory', id, })
   Object.keys(data.settings).forEach(k => settings[k] = data.settings[k])
+  category.value = emptyCategory.id
   list.value = data.bumarks
+}
+
+const toggleCategorySelectOpen = type => {
+  if (type !== categorySelectOpen.value) {
+    categorySelectOpen.value = type
+  } else {
+    categorySelectOpen.value = null
+  }
+}
+const changeCategorySelectOpen = data => {
+  categoryToAdd.color = data
+  categorySelectOpen.value = null
 }
 
 const toggleCancelCategory = async () => {
@@ -315,20 +332,27 @@ onMounted(async () => {
       <div v-if="categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
         <div class="flex w-full">
           <div class="flex w-full w-[90px] mr-2">
-            <custom-select
-                class="mr-2"
-                category="color"
-                :value="categoryToAdd.color"
-                @change="color => categoryToAdd.color = color"
-            />
-            <custom-select
-                category="icon"
-                :value="categoryToAdd.icon"
-                @change="icon => categoryToAdd.icon = icon"
-            />
+            <div class="mr-2">
+              <custom-select
+                  category="color"
+                  :disabled="categorySelectOpen === 'icon'"
+                  :value="categoryToAdd.color"
+                  @open="toggleCategorySelectOpen('color')"
+                  @change="data => changeCategorySelectOpen(data)"
+              />
+            </div>
+            <div>
+              <custom-select
+                  category="icon"
+                  :disabled="categorySelectOpen === 'color'"
+                  :value="categoryToAdd.icon"
+                  @open="toggleCategorySelectOpen('icon')"
+                  @change="data => changeCategorySelectOpen(data)"
+              />
+            </div>
           </div>
           <input v-model="categoryToAdd.label"
-                 placeholder="Insert label"
+                 placeholder="Insert category name"
                  class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-4 focus:outline-none focus:bg-white mr-2 focus:text-gray-900"
           />
           <div class="flex w-[90px] mr-2">
@@ -413,7 +437,9 @@ onMounted(async () => {
           </li>
         </ul>
       </div>
-      <div class="grid md:grid-cols-3 grid-cols-1 lg:gap-3 gap-1 px-3">
+      <div class="grid grid-cols-1 lg:gap-3 gap-1 px-3"
+          :class="{'md:grid-cols-3': typeView === 'card', 'md:grid-cols-3': typeView === 'row'}"
+      >
         <component :is="typeView"
                    v-for="(l, i) in listFiltered"
                    :key="`mark-${i}`"
@@ -461,8 +487,8 @@ onMounted(async () => {
         <span class="text-gray-400 text-3xl">Max mark</span>
         <div class="mb-3 xl:w-96">
           <input v-model="settings.max"
-                 :min="list.length > 10 ? list.length : 10"
-                 max="100"
+                 min="10"
+                 max="999"
                  type="number"
                  @change="e => setSettings('max', parseInt(e.target.value))"
                  class="form-control
@@ -486,7 +512,7 @@ onMounted(async () => {
       </div>
       <div class="flex items-center justify-between px-5">
         <span class="text-gray-400 text-3xl">Shortcut popup</span>
-        <div class="mb-3 xl:w-96 text-3xl text-gray-400">
+        <div class="mb-3 xl:w-96 text-2xl text-right text-gray-400">
           Ctrl+u / Cmd+u
         </div>
       </div>

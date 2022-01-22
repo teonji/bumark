@@ -100,6 +100,7 @@ const copy = () => {
               <img :src="icon || image || '/logo.png'" :alt="title" class="h-[120px] w-[120px] object-cover rounded-2xl">
             </div>
             <custom-select
+                v-if="canEdit"
                 :list="categories"
                 :value="category"
                 @change="changeCategory"

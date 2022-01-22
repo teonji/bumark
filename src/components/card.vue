@@ -134,7 +134,7 @@ const copy = () => {
       <div v-if="notes" class="flex w-full mt-4 relative">
         Notes: {{ notes }}
       </div>
-      <div class="flex w-full mt-4 relative">
+      <div v-if="canEdit" class="flex w-full mt-4 relative">
         <custom-select
             :list="categories"
             :value="category"
