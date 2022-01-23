@@ -136,11 +136,14 @@ const removeFromList = async id => {
   return bumarks
 }
 
-const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
+const fetchTabsData = async (tabs, tag, category, notes, settings) => {
   const data = tabs.map(t => fetchTabData(t, tag, category, notes, settings))
   const resolvedData = await Promise.all(data)
-  const listData = resolvedData.filter(f => !!f)
-  debugger
+  return resolvedData.filter(f => !!f)
+}
+
+const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
+  const listData = await fetchTabsData(tabs, tag, category, notes, settings)
   let list = await updateList(listData, settings)
   if (Array.isArray(list)) {
     await closeTabs(tabs)
