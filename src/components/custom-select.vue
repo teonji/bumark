@@ -111,7 +111,7 @@ const boxClass = val => {
       <i v-if="category !== 'color'" class="fas text-white" :class="[`fa-${innerValueData ? innerValueData.icon : innerValue}`, {'mr-2': innerValueData && innerValueData.label }]" aria-hidden="true" />
       <span v-if="innerValueData">{{ innerValueData.label || '' }}</span>
     </div>
-    <div v-if="opened" class="flex flex-wrap w-[200px] pt-2 absolute z-20">
+    <div v-if="opened" class="flex flex-wrap w-[400px] pt-2 absolute z-20">
       <div v-for="(item, k) in data"
             :key="k"
             class="relative tracking-wider text-white text-sm rounded leading-loose font-semibold border-2 mb-2 mr-4 min-h-[36px]"
