@@ -153,6 +153,7 @@ const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
   }
   return list
 }
+
 const clearSelectedMarks = async list => {
   const storage = await chrome.storage.sync.get(['bumarks'])
   const bumarks = (storage.bumarks || []).filter(f => !list.includes(f.id))
@@ -169,30 +170,27 @@ const getTabs = async (active = true, currentWindow = true) => {
 }
 
 const addCategory = async category => {
-  const storage = await chrome.storage.sync.get(['settings'])
-  const settings = storage.settings
-  let categories = settings.categories || []
-  debugger
+  const storage = await chrome.storage.sync.get(['categories'])
+  let categories = storage.categories || []
   categories.push(category)
-  debugger
-  settings.categories = categories
-  await chrome.storage.sync.set({ settings })
-  return settings
+  await chrome.storage.sync.set({ categories })
+  return categories
 }
+
 const removeCategory = async id => {
-  const storage = await chrome.storage.sync.get(['settings', 'bumarks'])
-  const settings = storage.settings
+  const storage = await chrome.storage.sync.get(['categories', 'bumarks'])
+  let categories = storage.categories || []
   const bumarks = (storage.bumarks || []).map(b => {
     if (b.category === id) {
       b.category = null
     }
     return b
   })
-  settings.categories = settings.categories.filter(cat => cat.id !== id)
+  categories = categories.filter(cat => cat.id !== id) || []
+  await chrome.storage.sync.set({ categories, bumarks })
   debugger
-  await chrome.storage.sync.set({ settings, bumarks })
   return {
-    settings,
+    categories,
     bumarks,
   }
 }
@@ -241,8 +239,14 @@ browser.runtime.onMessage.addListener(async request => {
       return bumarks
     }
     case 'previewMark': {
-      const tabs = await getTabs(true, true)
-      return fetchTabData(tabs[0], null, null, null, request.settings)
+      const activeTabs = await getTabs(true, true)
+      const actual = await fetchTabData(activeTabs[0], null, null, null, request.settings)
+      const allTabs = await getTabs(false, true)
+      const list = await fetchTabsData(allTabs, null, null, null, request.settings)
+      return {
+        actual,
+        list,
+      }
     }
     case 'addCategory': {
       return addCategory(request.category)
@@ -251,23 +255,20 @@ browser.runtime.onMessage.addListener(async request => {
       return removeCategory(request.id)
     }
     case 'getInitialStorage': {
-      const storage = await chrome.storage.sync.get(['bumarks', 'settings'])
+      const storage = await chrome.storage.sync.get(['bumarks', 'settings', 'categories'])
       const bumarks = storage.bumarks || []
       const settings = storage.settings || {}
-      // if (!Array.isArray(settings.categories)) {
-      //   settings.categories = []
-      // }
-      if (!arrayEquals(Object.keys(request.settings), Object.keys(settings))) {
+      const categories = storage.categories || []
+      if (!arrayEquals(Object.keys(request.defaultSettings), Object.keys(settings))) {
         const newSett = { ...request.defaultSettings, ...settings }
         Object.keys(newSett).forEach(k => settings[k] = newSett[k])
-        debugger
         await chrome.storage.sync.set({ settings })
       }
-      debugger
       await updateBadge(bumarks.length ? bumarks.length.toString() : null, settings)
       return {
         bumarks,
         settings,
+        categories,
       }
     }
     case 'openOptions': {
