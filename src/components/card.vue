@@ -86,13 +86,13 @@ const copy = () => {
     </span>
     <span class="absolute top-[10px] left-[10px]">
       <button @click="copy" type="button" class="rounded-md p-2 inline-flex items-center justify-center"
-      :class="[copied ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-gray-400 hover:text-gray-500 hover:bg-gray-100 bg-white opacity-70']">
+              :class="[copied ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-gray-400 hover:text-gray-500 hover:bg-gray-100 bg-white opacity-70']">
         <i class="fas fa-copy"></i>
         <span v-if="copied" class="ml-2">Copied</span>
       </button>
     </span>
     <div @click="open" :class="{ 'cursor-pointer': canEdit }">
-      <img v-if="image" :src="image" />
+      <img v-if="image" :src="image" class="max-h-[200px] w-full object-cover" />
     </div>
     <div class="p-8">
       <div class="justify-between flex">
@@ -131,7 +131,7 @@ const copy = () => {
         </div>
       </dl>
 
-      <div v-if="notes" class="flex w-full mt-4 relative">
+      <div v-if="notes" class="flex w-full mt-4 relative text-white">
         Notes: {{ notes }}
       </div>
       <div v-if="canEdit" class="flex w-full mt-4 relative">
