@@ -44,7 +44,6 @@ const fetchTabData = async (tab, tag, category, notes, settings) => {
         } catch (e) {
           console.log('Error getting title', e)
         }
-
         let description = null
         try {
           description = getDomQueries([
@@ -138,15 +137,16 @@ const removeFromList = async id => {
 
 const fetchTabsData = async (tabs, tag, category, notes, settings) => {
   const data = tabs.map(t => fetchTabData(t, tag, category, notes, settings))
-  const resolvedData = await Promise.all(data)
-  return resolvedData.filter(f => !!f)
+  return Promise.all(data)
 }
 
 const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
   const listData = await fetchTabsData(tabs, tag, category, notes, settings)
-  let list = await updateList(listData, settings)
+  const tabsIndex = listData.map((k, i) => k ? i : null).filter(f => !!f)
+  const tabsWithData = tabsIndex.map(i => tabs[i])
+  let list = await updateList(listData.filter(f => !!f), settings)
   if (Array.isArray(list)) {
-    await closeTabs(tabs)
+    await closeTabs(tabsWithData)
   }
   if (!listData.length) {
     list = 'ERROR_NOTHING'
@@ -243,9 +243,9 @@ browser.runtime.onMessage.addListener(async request => {
       const actual = await fetchTabData(activeTabs[0], null, null, null, request.settings)
       const allTabs = await getTabs(false, true)
       const list = await fetchTabsData(allTabs, null, null, null, request.settings)
-      return {
+       return {
         actual,
-        list,
+        list: list.filter(f => !!f),
       }
     }
     case 'addCategory': {
