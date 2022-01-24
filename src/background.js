@@ -188,7 +188,6 @@ const removeCategory = async id => {
   })
   categories = categories.filter(cat => cat.id !== id) || []
   await chrome.storage.sync.set({ categories, bumarks })
-  debugger
   return {
     categories,
     bumarks,

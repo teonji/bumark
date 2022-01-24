@@ -51,8 +51,18 @@ const settingsCategoriesToAdd = computed(() => {
   ]
 })
 
-const settingsCategories = computed(() => [...settingsCategoriesToAdd.value].filter(c => c.id !== 'ADD'))
-const settingsCategoriesFilters = computed(() => [...settingsCategories.value].map(c => {
+const copy = aObject => {
+  let v
+  let bObject = Array.isArray(aObject) ? [] : {}
+  for (const k in aObject) {
+    v = aObject[k]
+    bObject[k] = (typeof v === "object") ? copy(v) : v
+  }
+  return bObject
+}
+
+const settingsCategories = computed(() => JSON.parse(JSON.stringify(settingsCategoriesToAdd.value)).filter(c => c.id !== 'ADD'))
+const settingsCategoriesFilters = computed(() => JSON.parse(JSON.stringify(settingsCategories.value)).map(c => {
   if (!c.id) {
     c.label = 'No Filter'
   }
