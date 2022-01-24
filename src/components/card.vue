@@ -125,6 +125,13 @@ const copy = () => {
           <dd class="text-xs text-gray-300">Saved</dd>
         </div>
 
+        <custom-select
+            v-if="canEdit"
+            :list="categories"
+            :value="category"
+            @change="changeCategory"
+        />
+
         <div v-if="provider" class="flex flex-col-reverse" :class="{'ml-3 sm:ml-6': canEdit}">
           <dt class="text-sm font-medium text-gray-400">{{ provider }}</dt>
           <dd class="text-xs text-gray-300">Provider</dd>
@@ -133,13 +140,6 @@ const copy = () => {
 
       <div v-if="notes" class="flex w-full mt-4 relative text-white">
         Notes: {{ notes }}
-      </div>
-      <div v-if="canEdit" class="flex w-full mt-4 relative">
-        <custom-select
-            :list="categories"
-            :value="category"
-            @change="changeCategory"
-        />
       </div>
     </div>
   </div>

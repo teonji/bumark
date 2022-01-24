@@ -99,19 +99,21 @@ const copy = () => {
             <div @click="open" class="h-[120px] w-[120px]" :class="{ 'cursor-pointer': canEdit }">
               <img :src="icon || image || '/logo.png'" :alt="title" class="h-[120px] w-[120px] object-cover rounded-2xl">
             </div>
-            <custom-select
-                v-if="canEdit"
-                :list="categories"
-                :value="category"
-                @change="changeCategory"
-            />
+            <div class="mt-8">
+              <custom-select
+                  v-if="canEdit"
+                  :list="categories"
+                  :value="category"
+                  @change="changeCategory"
+              />
+            </div>
           </div>
           <div class="flex-auto ml-5">
             <div @click="open" v-if="title || description" class="flex items-center justify-between mt-2 mb-2" :class="{ 'cursor-pointer': canEdit }">
               <div class="flex items-center">
                 <div class="flex flex-col">
-                  <div v-if="title" class="w-full flex-none text-lg text-gray-800 font-bold leading-none min-h-[40px]">{{ title }}</div>
-                  <div class="flex-auto text-gray-500 my-1 min-h-[60px]">
+                  <div v-if="title" class="w-full flex-none text-lg text-gray-800 font-bold leading-none min-h-[55px]">{{ title }}</div>
+                  <div class="flex-auto text-gray-500 my-1 min-h-[70px]">
                     <span class="mr-3">{{ description || '(No description)' }}</span>
                   </div>
                 </div>

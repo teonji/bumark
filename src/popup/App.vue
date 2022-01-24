@@ -50,8 +50,9 @@ const settingsCategoriesToAdd = computed(() => {
     addCategory,
   ]
 })
-const settingsCategories = computed(() => JSON.parse(JSON.stringify(settingsCategoriesToAdd.value)).filter(c => c.id !== 'ADD'))
-const settingsCategoriesFilters = computed(() => JSON.parse(JSON.stringify(settingsCategories.value)).map(c => {
+
+const settingsCategories = computed(() => [...settingsCategoriesToAdd.value].filter(c => c.id !== 'ADD'))
+const settingsCategoriesFilters = computed(() => [...settingsCategories.value].map(c => {
   if (!c.id) {
     c.label = 'No Filter'
   }
@@ -64,7 +65,7 @@ const tagInputRef = ref(null)
 const typeView = shallowRef(defineAsyncComponent(() => import(`../components/${settings.type}.vue`)))
 
 const listFiltered = computed(() => {
-  const listData = JSON.parse(JSON.stringify(list.value))
+  const listData = list.value
       .filter(l => searchByTag.value.length === 0 || l.tags.some(t => searchByTag.value.includes(t)))
       .filter(l => category.value === null || l.category === category.value)
   if (search.value === '') {
@@ -155,7 +156,9 @@ const setShow = e => {
   show.value = e
   setTimeout(() => {
     if (e === 'add') {
-      tagInputRef.value.focus()
+      if (!categoryAddMode.value && loaded.value && (mark.value || (marks.value && marks.value.length))) {
+        tagInputRef.value.focus()
+      }
     } else if (e === 'list') {
       searchInputRef.value.focus()
     }
@@ -226,12 +229,11 @@ const toggleAddCategory = async () => {
 
 const changeScrollDesktopClass = () => {
   if (document.body.scrollHeight !== 600 && document.body.scrollWidth !== 400) {
-    scrollDesktopClass.value = document.body.scrollHeight - document.getElementById('nav').clientHeight + document.getElementById('action').clientHeight
+    scrollDesktopClass.value = document.body.scrollHeight - document.getElementById('nav').clientHeight + document.getElementById('action').clientHeight - 180
   }
 }
 
 onMounted(async () => {
-  tagInputRef.value.focus()
   if (location.search === '?show=list') {
     show.value = 'list'
   }
@@ -240,6 +242,11 @@ onMounted(async () => {
     mark.value = preview.actual
     marks.value = preview.list
     loaded.value = true
+    if (show.value !== 'list') {
+      setTimeout(() => {
+        tagInputRef.value.focus()
+      }, 200)
+    }
   } catch (e) {
     alert(e)
   }
@@ -304,9 +311,9 @@ onMounted(async () => {
     <div id="action" class="container mx-auto bg-gray-800">
       <template v-if="show === 'add'">
         <div class="flex items-center justify-center px-5">
-          <div class="w-full max-w-md mx-auto">
-            <div class="flex">
-              <div class="flex-1 group" v-if="list.length < settings.max && mark && loaded">
+          <div class="w-full max-w-md mx-auto h-[92px]">
+            <div v-if="list.length < settings.max && loaded" class="flex">
+              <div class="flex-1 group" v-if="mark">
                 <div @click="closeCurrentTab"
                      class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 group-hover:text-indigo-500"
                      :class="[list.length >= settings.max || (!mark && loaded) ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
@@ -318,7 +325,7 @@ onMounted(async () => {
                     </span>
                 </div>
               </div>
-              <div class="flex-1 group">
+              <div v-if="marks && marks.length > (mark ? 1 : 0)" class="flex-1 group">
                 <button @click="closeAllTabs" class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 cursor-pointer group-hover:text-indigo-500">
                     <span class="block px-1 pt-1 pb-1">
                         <i class="far fa-dizzy text-4xl pt-1 mb-1 block"></i>
@@ -330,7 +337,7 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-        <div v-if="!categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
+        <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex items-center justify-center container m-auto pb-3 px-3">
           <custom-select
               :list="settingsCategoriesToAdd"
               :value="category"
@@ -349,21 +356,33 @@ onMounted(async () => {
                      ref="tagInputRef"
                      @keyup.enter="closeCurrentTab"
                      placeholder="Insert a tag"
-                     :disabled="list.length >= settings.max || (!mark && !marks && loaded)"
+                     :disabled="list.length >= settings.max || (!mark && (!marks || !marks.length) && loaded)"
                      class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900">
             </div>
           </div>
         </div>
 
-        <div v-if="!categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
+        <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex items-center justify-center container m-auto pb-3 px-3">
           <div class="w-full mx-auto">
             <div class="relative text-gray-600 focus-within:text-gray-400">
                 <textarea v-model="notes"
                           placeholder="Insert notes"
-                          :disabled="list.length >= settings.max || (!mark && !marks && loaded)"
+                          :disabled="list.length >= settings.max || (!mark && (!marks || !marks.length) && loaded)"
                           class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-4 focus:outline-none focus:bg-white focus:text-gray-900" />
             </div>
           </div>
+        </div>
+
+        <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex justify-between items-center mb-3">
+          <span class="text-white ml-3 text-2xl">Preview</span>
+          <ul class="flex justify-end mr-3">
+            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
+              <i class="far fa-stream text-xl pt-1 mb-1 block" />
+            </li>
+            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
+              <i class="far fa-th-large text-xl pt-1 mb-1 block" />
+            </li>
+          </ul>
         </div>
 
         <div v-if="categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
@@ -405,17 +424,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <div v-if="loaded && (mark || marks)" class="flex justify-between items-center mb-3">
-          <span class="text-white ml-3 text-2xl">Preview</span>
-          <ul class="flex justify-end mr-3">
-            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
-              <i class="far fa-stream text-xl pt-1 mb-1 block" />
-            </li>
-            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
-              <i class="far fa-th-large text-xl pt-1 mb-1 block" />
-            </li>
-          </ul>
-        </div>
       </template>
       <template v-if="show === 'list'">
         <div v-if="list.length" class="flex items-center justify-between p-3">
@@ -470,7 +478,7 @@ onMounted(async () => {
     <div class="overflow-auto" :class="[show !== 'list' ? 'h-[270px]' : 'h-[390px]']" :style="{ height: `${scrollDesktopClass }px` }">
       <div class="container mx-auto mt-4">
         <div v-if="show === 'add'">
-          <div v-if="mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
+          <div v-if="!categoryAddMode && mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
             <component :is="typeView" v-bind="mark" :settings="settings" class="pb-4" />
           </div>
           <div v-else-if="!categoryAddMode">

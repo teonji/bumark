@@ -142,10 +142,10 @@ const fetchTabsData = async (tabs, tag, category, notes, settings) => {
 
 const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
   const listData = await fetchTabsData(tabs, tag, category, notes, settings)
-  const tabsIndex = listData.map((k, i) => k ? i : null).filter(f => !!f)
+  const tabsIndex = listData.map((k, i) => k ? i : null).filter(f => f !== null)
   const tabsWithData = tabsIndex.map(i => tabs[i])
-  let list = await updateList(listData.filter(f => !!f), settings)
-  if (Array.isArray(list)) {
+  let list = await updateList(listData.filter(f => f !== null), settings)
+  if (Array.isArray(list) && tabsWithData.length) {
     await closeTabs(tabsWithData)
   }
   if (!listData.length) {
@@ -245,7 +245,7 @@ browser.runtime.onMessage.addListener(async request => {
       const list = await fetchTabsData(allTabs, null, null, null, request.settings)
        return {
         actual,
-        list: list.filter(f => !!f),
+        list: list.filter(f => f !== null),
       }
     }
     case 'addCategory': {
