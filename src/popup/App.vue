@@ -387,7 +387,6 @@ onMounted(async () => {
 
         <div v-if="categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
           <div class="flex w-full">
-            {{ categoryToAdd }}
             <div class="flex w-full w-[90px] mr-2">
               <div class="mr-2">
                 <custom-select
