@@ -91,8 +91,9 @@ const copy = () => {
         <span v-if="copied" class="ml-2">Copied</span>
       </button>
     </span>
-    <div @click="open" :class="{ 'cursor-pointer': canEdit }">
+    <div @click="open" :class="{ 'cursor-pointer': canEdit, 'hidden sm:block': !image }">
       <img v-if="image" :src="image" class="max-h-[200px] w-full object-cover" />
+      <img v-else src="/logo.png" class="max-h-[200px] w-full object-cover" />
     </div>
     <div class="p-8">
       <div class="justify-between flex">

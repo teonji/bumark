@@ -79,7 +79,7 @@ const copy = () => {
 <template>
   <div class="max-w-3xl w-full mx-auto z-10">
     <div class="flex flex-col">
-      <div class="bg-white border border-white shadow-lg rounded-3xl p-4 mb-4">
+      <div class="bg-white border border-white shadow-lg rounded-3xl p-2">
         <div class="relative">
           <span v-if="canEdit" class="absolute top-0 right-0">
             <button @click="remove" type="button" class="bg-white opacity-70 rounded-md p-2 inline-flex items-center justify-center text-gray-400 hover:text-gray-500 hover:bg-gray-100">
@@ -99,7 +99,7 @@ const copy = () => {
             <div @click="open" class="h-[120px] w-[120px]" :class="{ 'cursor-pointer': canEdit }">
               <img :src="icon || image || '/logo.png'" :alt="title" class="h-[120px] w-[120px] object-cover rounded-2xl">
             </div>
-            <div class="mt-8">
+            <div class="mt-4">
               <custom-select
                   v-if="canEdit"
                   :list="categories"
@@ -113,23 +113,23 @@ const copy = () => {
               <div class="flex items-center">
                 <div class="flex flex-col">
                   <div v-if="title" class="w-full flex-none text-lg text-gray-800 font-bold leading-none min-h-[55px]">{{ title }}</div>
-                  <div class="flex-auto text-gray-500 my-1 min-h-[70px]">
+                  <div class="flex-auto text-gray-500 my-1 min-h-[110px]">
                     <span class="mr-3">{{ description || '(No description)' }}</span>
                   </div>
                 </div>
               </div>
             </div>
-            <button v-for="(t, i) in tags"
-                    :key="i"
-                    @click="toggleTag(t)"
-                    class="bg-blue-600 px-2 py-1 mr-2 mb-2 text-sm shadow-sm font-medium tracking-wider text-blue-100 rounded-full hover:shadow-2xl hover:bg-blue-700">
-              {{ t }}
-            </button>
             <div v-if="notes">
               Notes: {{ notes }}
             </div>
           </div>
         </div>
+        <button v-for="(t, i) in tags"
+                :key="i"
+                @click="toggleTag(t)"
+                class="bg-blue-600 px-2 py-1 mr-2 mb-2 text-sm shadow-sm font-medium tracking-wider text-blue-100 rounded-full hover:shadow-2xl hover:bg-blue-700">
+          {{ t }}
+        </button>
       </div>
     </div>
   </div>

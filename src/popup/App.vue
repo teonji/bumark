@@ -51,16 +51,6 @@ const settingsCategoriesToAdd = computed(() => {
   ]
 })
 
-const copy = aObject => {
-  let v
-  let bObject = Array.isArray(aObject) ? [] : {}
-  for (const k in aObject) {
-    v = aObject[k]
-    bObject[k] = (typeof v === "object") ? copy(v) : v
-  }
-  return bObject
-}
-
 const settingsCategories = computed(() => JSON.parse(JSON.stringify(settingsCategoriesToAdd.value)).filter(c => c.id !== 'ADD'))
 const settingsCategoriesFilters = computed(() => JSON.parse(JSON.stringify(settingsCategories.value)).map(c => {
   if (!c.id) {
@@ -219,8 +209,8 @@ const toggleCategorySelectOpen = type => {
     categorySelectOpen.value = null
   }
 }
-const changeCategorySelectOpen = data => {
-  categoryToAdd.color = data
+const changeCategorySelectOpen = (type, data) => {
+  categoryToAdd[type] = data
   categorySelectOpen.value = null
 }
 
@@ -239,7 +229,7 @@ const toggleAddCategory = async () => {
 
 const changeScrollDesktopClass = () => {
   if (document.body.scrollHeight !== 600 && document.body.scrollWidth !== 400) {
-    scrollDesktopClass.value = document.body.scrollHeight - document.getElementById('nav').clientHeight + document.getElementById('action').clientHeight - 180
+    scrollDesktopClass.value = document.body.scrollHeight - document.getElementById('nav').clientHeight + document.getElementById('action').clientHeight - 120
   }
 }
 
@@ -290,29 +280,29 @@ onMounted(async () => {
       <div class="flex justify-end items-center relative">
         <div class="flex items-center">
           <button @click="setShow('add')"
-                  class="w-[44px] h-[44px] inline-block py-1 px-3 hover:bg-gray-200 rounded-full relative ml-2"
-                  :class="[show === 'add' ? 'bg-blue-400 text-white' : 'bg-gray-200 text-black' ]"
+                  class="w-[44px] h-[44px] inline-block py-1 px-3 rounded-full relative ml-2"
+                  :class="[show === 'add' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black' ]"
           >
             <i class="far fa-plus text-xl pt-1 mb-1 block" />
           </button>
           <button @click="setShow('list')"
                   type="button"
-                  class="w-[44px] h-[44px] flex inline-block py-1 px-3 hover:bg-gray-200 rounded-full relative ml-2"
-                  :class="[show === 'list' ? 'bg-blue-400 text-white' : 'bg-gray-200 text-black' ]"
+                  class="w-[44px] h-[44px] flex inline-block py-1 px-3 rounded-full relative ml-2"
+                  :class="[show === 'list' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black' ]"
           >
             <span v-if="list.length" class="absolute top-[-6px] right-[-4px] bg-blue-600 px-1 m-1 text-sm shadow-sm font-medium tracking-wider text-blue-100 rounded-full">{{ list.length }}</span>
             <i class="far fa-list text-xl pt-1 mb-1 block" />
           </button>
           <button @click="setShow('settings')"
                   type="button"
-                  class="w-[44px] h-[44px] inline-block py-1 px-3 hover:bg-gray-200 rounded-full relative ml-2"
-                  :class="[show === 'settings' ? 'bg-blue-400 text-white' : 'bg-gray-200 text-black' ]"
+                  class="w-[44px] h-[44px] inline-block py-1 px-3 rounded-full relative ml-2"
+                  :class="[show === 'settings' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black' ]"
           >
             <i class="far fa-cog text-xl pt-1 mb-1 block" />
           </button>
           <button @click="openOptions"
                   type="button"
-                  class="block sm:hidden w-[44px] h-[44px] inline-block py-1 px-3 hover:bg-gray-200 rounded-full relative ml-2">
+                  class="block sm:hidden w-[44px] h-[44px] inline-block py-1 px-3 hover:bg-gray-300 rounded-full relative ml-2">
             <i class="far fa-external-link-alt text-xl pt-1 mb-1 block" />
           </button>
         </div>
@@ -338,9 +328,9 @@ onMounted(async () => {
               <div v-if="marks && marks.length > (mark ? 1 : 0)" class="flex-1 group">
                 <button @click="closeAllTabs" class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 cursor-pointer group-hover:text-indigo-500">
                     <span class="block px-1 pt-1 pb-1">
-                        <i class="far fa-dizzy text-4xl pt-1 mb-1 block"></i>
+                      <i class="far fa-dizzy text-4xl pt-1 mb-1 block"></i>
                       <span class="block text-xs pb-2">Close All <span v-if="marks">{{ marks.length }}</span> tabs</span>
-                        <span class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full"></span>
+                      <span class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full"></span>
                     </span>
                 </button>
               </div>
@@ -386,10 +376,10 @@ onMounted(async () => {
         <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex justify-between items-center mb-3">
           <span class="text-white ml-3 text-2xl">Preview</span>
           <ul class="flex justify-end mr-3">
-            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
+            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-stream text-xl pt-1 mb-1 block" />
             </li>
-            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
+            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-th-large text-xl pt-1 mb-1 block" />
             </li>
           </ul>
@@ -397,6 +387,7 @@ onMounted(async () => {
 
         <div v-if="categoryAddMode" class="flex items-center justify-center container m-auto pb-3 px-3">
           <div class="flex w-full">
+            {{ categoryToAdd }}
             <div class="flex w-full w-[90px] mr-2">
               <div class="mr-2">
                 <custom-select
@@ -404,7 +395,7 @@ onMounted(async () => {
                     :disabled="categorySelectOpen === 'icon'"
                     :value="categoryToAdd.color"
                     @open="toggleCategorySelectOpen('color')"
-                    @change="data => changeCategorySelectOpen(data)"
+                    @change="data => changeCategorySelectOpen('color', data)"
                 />
               </div>
               <div>
@@ -413,7 +404,7 @@ onMounted(async () => {
                     :disabled="categorySelectOpen === 'color'"
                     :value="categoryToAdd.icon"
                     @open="toggleCategorySelectOpen('icon')"
-                    @change="data => changeCategorySelectOpen(data)"
+                    @change="data => changeCategorySelectOpen('icon', data)"
                 />
               </div>
             </div>
@@ -436,11 +427,7 @@ onMounted(async () => {
 
       </template>
       <template v-if="show === 'list'">
-        <div v-if="list.length" class="flex items-center justify-between p-3">
-          <div @click="openSelectedMarks" class="text-gray-400 cursor-pointer">Open {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</div>
-          <div @click="clearSelectedMarks" class="text-gray-400 cursor-pointer">Clear {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</div>
-        </div>
-        <div v-if="list.length" class="block sm:hidden flex items-center justify-center pb-3 px-3">
+        <div v-if="list.length" class="block sm:hidden flex items-center justify-center p-3">
           <div class="w-full mx-auto">
             <div class="relative text-gray-600 focus-within:text-gray-400">
               <span class="absolute inset-y-0 left-0 flex items-center pl-2">
@@ -461,12 +448,35 @@ onMounted(async () => {
             <span class="ml-3">x</span>
           </button>
         </div>
-        <div v-if="list.length" class="flex justify-between items-center mb-3">
+        <div v-if="list.length" class="flex justify-between items-center my-3">
           <button @click="copySelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center"
-                  :class="[copiedAll ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-gray-400 hover:text-gray-500 hover:bg-gray-100 bg-white opacity-70']">
+                  :class="[copiedAll ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-white bg-blue-400 hover:bg-blue-500']">
             <i class="fas fa-copy"></i>
             <span v-if="copiedAll" class="ml-2">Copied</span>
-            <span v-else class="ml-2">Copy {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}</span>
+            <span v-else class="flex justify-between items-center ml-2">
+              <span>Copy</span>
+              <span class="hidden sm:block ml-1">
+                {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}
+              </span>
+            </span>
+          </button>
+          <button @click="openSelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center text-white bg-green-400 hover:bg-green-500">
+            <i class="fas fa-external-link-alt"></i>
+            <span class="flex justify-between items-center ml-2">
+              Open
+              <span class="hidden sm:block ml-1">
+                {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}
+              </span>
+            </span>
+          </button>
+          <button @click="clearSelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center text-white bg-red-400 hover:bg-red-500">
+            <i class="fas fa-trash"></i>
+            <span class="flex justify-between items-center ml-2">
+              Clear
+              <span class="hidden sm:block ml-1">
+                {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}
+              </span>
+            </span>
           </button>
           <custom-select
               v-if="settingsCategories.length > 1"
@@ -475,18 +485,18 @@ onMounted(async () => {
               @change="changeCategory"
           />
           <ul v-if="loaded" class="flex justify-end mr-3">
-            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 text-white' : 'bg-white']">
+            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-stream text-xl pt-1 mb-1 block" />
             </li>
-            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 text-white' : 'bg-white']">
+            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-th-large text-xl pt-1 mb-1 block" />
             </li>
           </ul>
         </div>
       </template>
     </div>
-    <div class="overflow-auto" :class="[show !== 'list' ? 'h-[270px]' : 'h-[390px]']" :style="{ height: `${scrollDesktopClass }px` }">
-      <div class="container mx-auto mt-4">
+    <div class="overflow-auto" :class="[show !== 'list' ? 'h-[274px]' : 'h-[408px]']" :style="{ height: `${ scrollDesktopClass }px` }">
+      <div class="container mx-auto">
         <div v-if="show === 'add'">
           <div v-if="!categoryAddMode && mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
             <component :is="typeView" v-bind="mark" :settings="settings" class="pb-4" />
@@ -513,7 +523,7 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-        <div v-if="show === 'list'">
+        <div v-if="show === 'list'" class="mt-4">
           <div class="grid grid-cols-1 lg:gap-3 gap-1 px-3 sm:grid-cols-3">
             <component :is="typeView"
                        v-for="(l, i) in listFiltered"
