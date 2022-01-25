@@ -541,7 +541,7 @@ onMounted(async () => {
             Nothing found
           </div>
         </div>
-        <div v-if="show === 'settings'">
+        <div v-if="show === 'settings'" class="mt-4">
           <div class="flex items-center justify-between px-5">
             <span class="text-gray-400 text-3xl">Date Format</span>
             <div class="mb-3 xl:w-96">
