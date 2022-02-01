@@ -3,12 +3,11 @@ import customSelect from '../components/custom-select.vue'
 import { ref, shallowRef, reactive, computed, onMounted, defineAsyncComponent, } from 'vue'
 const defaultSettings = {
   type: 'row',
-  max: 100,
-  dateFormat: 'DD-MM-YYYY',
+  category: null,
 }
 const emptyCategory = {
   id: null,
-  label: 'Nothing',
+  label: 'None',
   color: 'gray-500',
   icon: 'ban',
 }
@@ -21,10 +20,12 @@ const addCategory = {
 
 const settings = reactive(defaultSettings)
 const copiedAll = ref(false)
+const reloading = ref(false)
 const list = ref([])
 const tag = ref('')
 const categories = ref([])
-const category = ref(emptyCategory.id)
+const category = ref(undefined)
+const categoryFilter = ref(emptyCategory.id)
 const categoryAddMode = ref(false)
 const categoryToAdd = reactive({
   label: '',
@@ -35,19 +36,18 @@ const categorySelectOpen = ref(null)
 const notes = ref('')
 const search = ref('')
 const searchByTag = ref([])
-const show = ref('add') // add | list | settings
+const show = ref('add') // add | list
 const scrollDesktopClass = ref(null)
 
 const mark = ref(null)
 const marks = ref(null)
 const loaded = ref(false)
-const dateFormats = ['DD-MM-YYYY', 'MM-DD-YYYY', 'YYYY-MM-DD']
 
 const settingsCategoriesToAdd = computed(() => {
   return [
     emptyCategory,
-    ...categories.value || [],
     addCategory,
+    ...categories.value || [],
   ]
 })
 
@@ -62,12 +62,13 @@ const settingsCategoriesFilters = computed(() => JSON.parse(JSON.stringify(setti
 const searchInputRef = ref(null)
 const tagInputRef = ref(null)
 
-const typeView = shallowRef(defineAsyncComponent(() => import(`../components/${settings.type}.vue`)))
+const typeView = shallowRef(defineAsyncComponent(() => import(`../components/${settings.type || 'row'}.vue`)))
 
 const listFiltered = computed(() => {
+  const categoryId = categoryFilter.value
   const listData = list.value
       .filter(l => searchByTag.value.length === 0 || l.tags.some(t => searchByTag.value.includes(t)))
-      .filter(l => category.value === null || l.category === category.value)
+      .filter(l => !categoryId || l.category === categoryId)
   if (search.value === '') {
     return listData
   }
@@ -91,8 +92,8 @@ const copySelectedMarks = () => {
 const openMark = async link => await browser.runtime.sendMessage({ type: 'openMark', link })
 
 const removeMark = async id => {
-  if (confirm('Are you sure?')) {
-    list.value = await browser.runtime.sendMessage({ type: 'removeMark', id, settings, })
+  if (confirm('Are you sure you wanna remove this?')) {
+    list.value = await browser.runtime.sendMessage({ type: 'removeMark', id, })
     clearTag()
   }
 }
@@ -112,12 +113,9 @@ const send = async (type, data = {}) => {
     tag: tag.value,
     category: category.value,
     notes: notes.value,
-    settings,
     ...data,
   })
-  if (newList === 'ERROR_MAX') {
-    alert('Max mark reached.')
-  } else if (newList === 'ERROR_NOTHING') {
+  if (newList === 'ERROR_NOTHING') {
     alert('Tab without url.')
   } else {
     list.value = newList
@@ -129,18 +127,21 @@ const clearTag = () => {
   tag.value = ''
 }
 const closeCurrentTab = async () => {
-  if (list.value.length < settings.max && mark.value && loaded.value) {
+  if (mark.value && loaded.value) {
     await send('closeCurrentTab')
   }
 }
 const closeAllTabs = async () => {
-  if (confirm('Are you sure?')) {
+  if (confirm(`Are you sure you wanna close this ${marks.value.length} tab${marks.value.length > 1 ? 's' : ''}?`)) {
     await send('closeAllTabs')
+    await reload()
+    show.value = 'list'
   }
 }
 const clearSelectedMarks = async () => {
-  if (confirm('Are you sure?')) {
-    await send('clearSelectedMarks', { list: listFiltered.value.map(l => l.id) })
+  const listToClear = listFiltered.value.map(l => l.id)
+  if (confirm(`Are you sure you wanna clear this ${listToClear.length} tab${listToClear.length > 1 ? 's' : ''}?`)) {
+    await send('clearSelectedMarks', { list: listToClear })
   }
 }
 const toggleTag = e => {
@@ -188,6 +189,10 @@ const changeCategory = val => {
     categoryAddMode.value = !categoryAddMode.value
   }
 }
+
+const changeCategoryFilter = val => {
+  categoryFilter.value = val
+}
 const clearAddCategory = () => {
   categoryAddMode.value = !categoryAddMode.value
   categoryToAdd.label = ''
@@ -199,7 +204,7 @@ const removeCategory = async id => {
   const storage = await browser.runtime.sendMessage({ type: 'removeCategory', id, })
   category.value = emptyCategory.id
   categories.value = storage.categories
-  list.value = storage.bumarks
+  list.value = storage.list
 }
 
 const toggleCategorySelectOpen = type => {
@@ -233,33 +238,52 @@ const changeScrollDesktopClass = () => {
   }
 }
 
-onMounted(async () => {
-  if (location.search === '?show=list') {
-    show.value = 'list'
-  }
+const reload = async () => {
+  reloading.value = true
+  await previewMark()
+  await getInitialStorage()
+  changeScrollDesktopClass()
+  setTimeout(() => {
+    reloading.value = false
+  }, 1000)
+}
+
+const previewMark = async () => {
   try {
-    const preview = await browser.runtime.sendMessage({ type: 'previewMark', settings, })
+    const preview = await browser.runtime.sendMessage({ type: 'previewMark', })
     mark.value = preview.actual
     marks.value = preview.list
     loaded.value = true
     if (show.value !== 'list') {
       setTimeout(() => {
-        tagInputRef.value.focus()
+        if (tagInputRef.value) {
+          tagInputRef.value.focus()
+        }
       }, 200)
     }
   } catch (e) {
     alert(e)
   }
+}
+
+const getInitialStorage = async () => {
   try {
     const { bumarks, settings: settingsFromStorage, categories: categoriesFromStorage } = await browser.runtime.sendMessage({ type: 'getInitialStorage', defaultSettings })
     list.value = bumarks
     categories.value = categoriesFromStorage
     Object.keys(settingsFromStorage).forEach(k => settings[k] = settingsFromStorage[k])
+    category.value = settingsFromStorage.category || null
     await changeTypeView(settingsFromStorage.type)
   } catch (e) {
     alert(e)
   }
-  changeScrollDesktopClass()
+}
+
+onMounted(async () => {
+  if (location.search === '?show=list') {
+    show.value = 'list'
+  }
+  await reload()
 })
 </script>
 
@@ -269,16 +293,19 @@ onMounted(async () => {
       <img src="/logo.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
       <div v-if="show === 'list'" class="w-full mx-auto ml-3">
         <div class="hidden sm:block relative text-gray-600 focus-within:text-gray-400">
-          <span class="absolute inset-y-0 left-0 flex items-center pl-2">
-            <button type="submit" class="p-1 focus:outline-none focus:shadow-outline">
-              <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            </button>
+          <span class="absolute inset-y-0 left-0 flex items-center pl-4">
+            <i class="fas fa-search"></i>
           </span>
           <input v-model="search" ref="searchInputRef" placeholder="Search mark" class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900">
         </div>
       </div>
       <div class="flex justify-end items-center relative">
         <div class="flex items-center">
+          <button @click="reload"
+                  class="w-[44px] h-[44px] inline-block py-1 px-3 rounded-full relative ml-2 bg-gray-200 hover:bg-gray-300 text-black"
+          >
+            <i class="far fa-sync text-xl pt-1 mb-1 block" :class="{'fa-spin': reloading}" />
+          </button>
           <button @click="setShow('add')"
                   class="w-[44px] h-[44px] inline-block py-1 px-3 rounded-full relative ml-2"
                   :class="[show === 'add' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black' ]"
@@ -293,13 +320,6 @@ onMounted(async () => {
             <span v-if="list.length" class="absolute top-[-6px] right-[-4px] bg-blue-600 px-1 m-1 text-sm shadow-sm font-medium tracking-wider text-blue-100 rounded-full">{{ list.length }}</span>
             <i class="far fa-list text-xl pt-1 mb-1 block" />
           </button>
-          <button @click="setShow('settings')"
-                  type="button"
-                  class="w-[44px] h-[44px] inline-block py-1 px-3 rounded-full relative ml-2"
-                  :class="[show === 'settings' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black' ]"
-          >
-            <i class="far fa-cog text-xl pt-1 mb-1 block" />
-          </button>
           <button @click="openOptions"
                   type="button"
                   class="block sm:hidden w-[44px] h-[44px] inline-block py-1 px-3 hover:bg-gray-300 rounded-full relative ml-2">
@@ -312,16 +332,16 @@ onMounted(async () => {
       <template v-if="show === 'add'">
         <div class="flex items-center justify-center px-5">
           <div class="w-full max-w-md mx-auto h-[92px]">
-            <div v-if="list.length < settings.max && loaded" class="flex">
+            <div v-if="loaded" class="flex">
               <div class="flex-1 group" v-if="mark">
                 <div @click="closeCurrentTab"
                      class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 group-hover:text-indigo-500"
-                     :class="[list.length >= settings.max || (!mark && loaded) ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
+                     :class="[!mark && loaded ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
                 >
                     <span class="block px-1 pt-1 pb-1">
                         <i class="far fa-flushed text-4xl pt-1 mb-1 block"></i>
                         <span class="block text-xs pb-2">Close Current tab</span>
-                        <span v-if="list.length < settings.max && mark && loaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
+                        <span v-if="mark && loaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
                     </span>
                 </div>
               </div>
@@ -337,7 +357,7 @@ onMounted(async () => {
             </div>
           </div>
         </div>
-        <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex items-center justify-center container m-auto pb-3 px-3">
+        <div v-if="!categoryAddMode && category !== undefined && loaded && (mark || (marks && marks.length))" class="flex items-center justify-center container m-auto pb-3 px-3">
           <custom-select
               :list="settingsCategoriesToAdd"
               :value="category"
@@ -347,16 +367,14 @@ onMounted(async () => {
           />
           <div class="w-full mx-auto ml-3">
             <div class="relative text-gray-600 focus-within:text-gray-400">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-2">
-                  <button type="submit" class="p-1 focus:outline-none focus:shadow-outline">
-                    <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                  </button>
-                </span>
+              <span class="absolute inset-y-0 left-0 flex items-center pl-4">
+                <i class="fas fa-tag"></i>
+              </span>
               <input v-model="tag"
                      ref="tagInputRef"
                      @keyup.enter="closeCurrentTab"
                      placeholder="Insert a tag"
-                     :disabled="list.length >= settings.max || (!mark && (!marks || !marks.length) && loaded)"
+                     :disabled="!mark && (!marks || !marks.length) && loaded"
                      class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900">
             </div>
           </div>
@@ -367,7 +385,8 @@ onMounted(async () => {
             <div class="relative text-gray-600 focus-within:text-gray-400">
                 <textarea v-model="notes"
                           placeholder="Insert notes"
-                          :disabled="list.length >= settings.max || (!mark && (!marks || !marks.length) && loaded)"
+                          maxlength="255"
+                          :disabled="!mark && (!marks || !marks.length) && loaded"
                           class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-4 focus:outline-none focus:bg-white focus:text-gray-900" />
             </div>
           </div>
@@ -429,10 +448,8 @@ onMounted(async () => {
         <div v-if="list.length" class="block sm:hidden flex items-center justify-center p-3">
           <div class="w-full mx-auto">
             <div class="relative text-gray-600 focus-within:text-gray-400">
-              <span class="absolute inset-y-0 left-0 flex items-center pl-2">
-                <button type="submit" class="p-1 focus:outline-none focus:shadow-outline">
-                  <svg fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" class="w-6 h-6"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </button>
+               <span class="absolute inset-y-0 left-0 flex items-center pl-4">
+                <i class="fas fa-search"></i>
               </span>
               <input v-model="search" ref="searchInputRef" placeholder="Search mark" class="w-full py-2 text-sm text-gray-400 bg-gray-900 rounded-md pl-10 focus:outline-none focus:bg-white focus:text-gray-900">
             </div>
@@ -447,7 +464,7 @@ onMounted(async () => {
             <span class="ml-3">x</span>
           </button>
         </div>
-        <div v-if="list.length" class="flex justify-between items-center my-3">
+        <div v-if="list.length" class="flex justify-between items-center mt-3">
           <button @click="copySelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center"
                   :class="[copiedAll ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-white bg-blue-400 hover:bg-blue-500']">
             <i class="fas fa-copy"></i>
@@ -477,12 +494,14 @@ onMounted(async () => {
               </span>
             </span>
           </button>
-          <custom-select
-              v-if="settingsCategories.length > 1"
-              :list="settingsCategoriesFilters"
-              :value="category"
-              @change="changeCategory"
-          />
+          <div class="hidden sm:block">
+            <custom-select
+                v-if="settingsCategories.length > 1"
+                :list="settingsCategoriesFilters"
+                :value="categoryFilter"
+                @change="changeCategoryFilter"
+            />
+          </div>
           <ul v-if="loaded" class="flex justify-end mr-3">
             <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-stream text-xl pt-1 mb-1 block" />
@@ -492,10 +511,18 @@ onMounted(async () => {
             </li>
           </ul>
         </div>
+        <div v-if="list.length" class="flex justify-center items-center mt-3 block sm:hidden">
+          <custom-select
+              v-if="settingsCategories.length > 1"
+              :list="settingsCategoriesFilters"
+              :value="categoryFilter"
+              @change="changeCategoryFilter"
+          />
+        </div>
       </template>
     </div>
-    <div class="overflow-auto" :class="[show !== 'list' ? 'h-[274px]' : 'h-[408px]']" :style="{ height: `${ scrollDesktopClass }px` }">
-      <div class="container mx-auto">
+    <div class="overflow-auto" :class="[show !== 'list' ? 'h-[270px]' : 'h-[370px]']" :style="{ height: `${ scrollDesktopClass }px` }">
+      <div class="2xl:container mx-auto">
         <div v-if="show === 'add'">
           <div v-if="!categoryAddMode && mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
             <component :is="typeView" v-bind="mark" :settings="settings" class="pb-4" />
@@ -523,7 +550,7 @@ onMounted(async () => {
           </div>
         </div>
         <div v-if="show === 'list'" class="mt-4">
-          <div class="grid grid-cols-1 lg:gap-3 gap-1 px-3 sm:grid-cols-3">
+          <div class="grid grid-cols-1 2xl:gap-3 gap-1 px-3 2xl:grid-cols-3">
             <component :is="typeView"
                        v-for="(l, i) in listFiltered"
                        :key="`mark-${i}`"
@@ -539,69 +566,6 @@ onMounted(async () => {
           </div>
           <div v-if="!listFiltered.length" class="flex items-center justify-center px-5 text-gray-400">
             Nothing found
-          </div>
-        </div>
-        <div v-if="show === 'settings'" class="mt-4">
-          <div class="flex items-center justify-between px-5">
-            <span class="text-gray-400 text-3xl">Date Format</span>
-            <div class="mb-3 xl:w-96">
-              <select v-model="settings.dateFormat"
-                      @change="e => setSettings('dateFormat', e.target.value)"
-                      class="form-select appearance-none
-                         block
-                         w-full
-                         px-3
-                         py-1.5
-                         text-base
-                         font-normal
-                         text-gray-700
-                         bg-white bg-clip-padding bg-no-repeat
-                         border border-solid border-gray-300
-                         rounded
-                         transition
-                         ease-in-out
-                         m-0
-                         focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
-                      aria-label="Select date format">
-                <option v-for="(f, i) in dateFormats" :selected="settings.dateFormat === f" :key="`format-${i}`">{{ f }}</option>
-              </select>
-            </div>
-          </div>
-          <div class="flex items-center justify-between px-5">
-            <span class="text-gray-400 text-3xl">Max mark</span>
-            <div class="mb-3 xl:w-96">
-              <input v-model="settings.max"
-                     min="10"
-                     max="999"
-                     type="number"
-                     @change="e => setSettings('max', parseInt(e.target.value))"
-                     class="form-control
-                        block
-                        w-full
-                        px-4
-                        py-2
-                        text-xl
-                        font-normal
-                        text-gray-700
-                        bg-white bg-clip-padding
-                        border border-solid border-gray-300
-                        rounded
-                        transition
-                        ease-in-out
-                        m-0
-                        focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none"
-                     placeholder="Max mark"
-              />
-            </div>
-          </div>
-          <div class="flex items-center justify-between px-5">
-            <span class="text-gray-400 text-3xl">Shortcut popup</span>
-            <div class="mb-3 xl:w-96 text-2xl text-right text-gray-400">
-              Ctrl+u / Cmd+u
-            </div>
-          </div>
-          <div class="flex items-center justify-center mt-12 text-gray-400">
-            <span>Made with ❤ by teonji © {{ new Date().getFullYear() }}</span>
           </div>
         </div>
       </div>

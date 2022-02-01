@@ -1,8 +1,13 @@
 const dayjs = require('dayjs')
 
+const get = async (name, defaultValue = null) => {
+  const storage = await chrome.storage.sync.get(name)
+  return storage[name] || defaultValue
+}
+
 const closeTabs = async tabs => tabs.forEach(tab => chrome.tabs.remove(tab.id))
 
-const fetchTabData = async (tab, tag, category, notes, settings) => {
+const fetchTabData = async (tab, tag, category, notes) => {
   try {
     const res = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
@@ -47,9 +52,9 @@ const fetchTabData = async (tab, tag, category, notes, settings) => {
         let description = null
         try {
           description = getDomQueries([
-            ["meta[name='description']", "content"],
             ["meta[property='og:description']", "content"],
-            ["meta[name='twitter:description']", "content"]
+            ["meta[name='twitter:description']", "content"],
+            ["meta[name='description']", "content"],
           ])
         } catch (e) {
           console.log('Error getting description', e)
@@ -62,17 +67,17 @@ const fetchTabData = async (tab, tag, category, notes, settings) => {
           const base = baseData ? baseData.getAttribute("href") : ''
 
           image = getDomQueries([
-            ["meta[property='og:image']", "content"],
             ["meta[name='twitter:image']", "content"],
+            ["meta[property='og:image']", "content"],
           ])
           image = fixImageUrl(image, base, url)
 
           icon = getDomQueries([
-            ["link[rel='icon']", "href"],
-            ["link[rel='shortcut icon']", "href"],
-            ["link[rel='apple-touch-icon']", "href"],
-            ["link[rel='apple-touch-icon-precomposed']", "href"],
             ["meta[itemprop='image']", "content"],
+            ["link[rel='apple-touch-icon-precomposed']", "href"],
+            ["link[rel='apple-touch-icon']", "href"],
+            ["link[rel='shortcut icon']", "href"],
+            ["link[rel='icon']", "href"],
           ])
           icon = fixImageUrl(icon, base, url)
         } catch (e) {
@@ -90,75 +95,75 @@ const fetchTabData = async (tab, tag, category, notes, settings) => {
       }
     })
     const metadata = res[0].result
-    metadata.id = crypto.randomUUID()
+    metadata.id = `bumark_${crypto.randomUUID()}`
     metadata.category = category
     metadata.notes = notes
     metadata.date = dayjs().format('YYYY-MM-DD hh:mm')
-    metadata.tags = [tag, metadata.provider, dayjs().format(settings.dateFormat)].filter(f => !!f)
+    metadata.tags = [tag, metadata.provider, dayjs().format('DD MMM YYYY')].filter(f => !!f)
     return metadata
   } catch (e) {
     return null
   }
 }
 
-const updateList = async (listData, settings) => {
-  const storage = await chrome.storage.sync.get(['bumarks'])
-  let bumarks = storage.bumarks || []
-  listData.forEach(data => bumarks.unshift(data))
-  if (bumarks.length > settings.max) {
-    return 'ERROR_MAX'
-  } else {
-    await updateBadge(bumarks.length ? bumarks.length.toString() : null, settings)
-    await chrome.storage.sync.set({ bumarks })
-    return bumarks
-  }
-}
-
-const updateBadge = async (text, settings) => {
+const updateBadge = async text => {
   try {
     await chrome.action.setBadgeText({ text: text || '' })
-    const val = text ? parseInt(text) : 0
-    if (settings.max && val === settings.max) {
-      await chrome.action.setBadgeBackgroundColor({ color: '#f00' })
-    } else {
-      await chrome.action.setBadgeBackgroundColor({ color: 'green' })
-    }
+    await chrome.action.setBadgeBackgroundColor({ color: 'green' })
   } catch (e) {
     return e.message
   }
 }
 
-const removeFromList = async id => {
-  const storage = await chrome.storage.sync.get(['bumarks'])
-  let bumarks = (storage.bumarks || []).filter(f => f.id !== id)
-  await chrome.storage.sync.set({ bumarks })
-  return bumarks
+const removeMark = async id => {
+  try {
+    await chrome.storage.sync.remove(id)
+    const list = await getBumarksList()
+    await updateBadge(list.length ? list.length.toString() : null)
+    return list
+  } catch (e) {
+    return null
+  }
 }
 
-const fetchTabsData = async (tabs, tag, category, notes, settings) => {
-  const data = tabs.map(t => fetchTabData(t, tag, category, notes, settings))
+const fetchTabsData = async (tabs, tag, category, notes) => {
+  const data = tabs.map(t => fetchTabData(t, tag, category, notes))
   return Promise.all(data)
 }
 
-const closeAndSaveTabs = async (tabs, tag, category, notes, settings) => {
-  const listData = await fetchTabsData(tabs, tag, category, notes, settings)
-  const tabsIndex = listData.map((k, i) => k ? i : null).filter(f => f !== null)
-  const tabsWithData = tabsIndex.map(i => tabs[i])
-  let list = await updateList(listData.filter(f => f !== null), settings)
-  if (Array.isArray(list) && tabsWithData.length) {
-    await closeTabs(tabsWithData)
+const closeAndSaveTabs = async (tabs, tag, category, notes) => {
+  let list
+  const settings = get( 'settings', {})
+  try {
+    const listData = await fetchTabsData(tabs, tag, category, notes)
+    if (!listData.length) {
+      list = 'ERROR_NOTHING'
+    } else {
+      const tabsIndex = listData.map((k, i) => k ? i : null).filter(f => f !== null)
+      const tabsWithData = tabsIndex.map(i => tabs[i])
+      list = await addMarks(listData.filter(f => f !== null))
+      if (Array.isArray(list) && tabsWithData.length) {
+        await closeTabs(tabsWithData)
+      }
+      if (settings.category !== category) {
+        await chrome.storage.sync.set({ settings: { ...settings, category } })
+      }
+    }
+    return list
+  } catch (e) {
+    return null
   }
-  if (!listData.length) {
-    list = 'ERROR_NOTHING'
-  }
-  return list
 }
 
-const clearSelectedMarks = async list => {
-  const storage = await chrome.storage.sync.get(['bumarks'])
-  const bumarks = (storage.bumarks || []).filter(f => !list.includes(f.id))
-  await chrome.storage.sync.set({ bumarks })
-  return bumarks
+const clearSelectedMarks = async marks => {
+  try {
+    await chrome.storage.sync.remove(marks)
+    const list = await getBumarksList()
+    await updateBadge(list.length ? list.length.toString() : null)
+    return list
+  } catch (e) {
+    return null
+  }
 }
 
 const getTabs = async (active = true, currentWindow = true) => {
@@ -178,19 +183,74 @@ const addCategory = async category => {
 }
 
 const removeCategory = async id => {
-  const storage = await chrome.storage.sync.get(['categories', 'bumarks'])
-  let categories = storage.categories || []
-  const bumarks = (storage.bumarks || []).map(b => {
-    if (b.category === id) {
-      b.category = null
-    }
-    return b
-  })
+  let categories = await get('categories', [])
   categories = categories.filter(cat => cat.id !== id) || []
-  await chrome.storage.sync.set({ categories, bumarks })
+
+  const bumarksToUpdate = await getBumarksList()
+                    .filter(f => f.category === id)
+                    .map(b => {
+                      if (b.category === id) {
+                        b.category = null
+                      }
+                      return b
+                    })
+                    .reduce((acc, cur) => {
+                      acc[cur.id] = cur
+                      return acc
+                    }, {})
+  await chrome.storage.sync.set({ categories, ...bumarksToUpdate })
+
+  const list = await getBumarksList()
   return {
     categories,
-    bumarks,
+    list,
+  }
+}
+
+const getBumarksList = async () => {
+  const storage = await chrome.storage.sync.get()
+  const list = Object.keys(storage).filter(s => s.startsWith('bumark_')).map(s => storage[s])
+  return list.sort((a, b) => {
+    const aDate = dayjs(a.date)
+    const bDate = dayjs(b.date)
+    if (aDate > bDate) {
+      return -1
+    }
+    if (aDate < bDate) {
+      return 1
+    }
+    return 0
+  })
+}
+
+const getMark = async id => {
+  const storage = await chrome.storage.sync.get(id)
+  return storage[id] || null
+}
+
+const addMarks = async (marks = []) => {
+  try {
+    const toAdd = {}
+    marks.forEach(mark => {
+      toAdd[mark.id] = mark
+    })
+    await chrome.storage.sync.set(toAdd)
+    const list = await getBumarksList()
+    await updateBadge(list.length ? list.length.toString() : null)
+    return list
+  } catch (e) {
+    return null
+  }
+}
+
+const editMark = async (id, name, value) => {
+  try {
+    const mark = await getMark(id)
+    mark[name] = value
+    await chrome.storage.sync.set({ [id]: mark })
+    return getBumarksList()
+  } catch (e) {
+    return null
   }
 }
 
@@ -203,11 +263,11 @@ browser.runtime.onMessage.addListener(async request => {
   switch (request.type) {
     case 'closeCurrentTab': {
       const currentTabs = await getTabs(true, true)
-      return closeAndSaveTabs(currentTabs, request.tag, request.category, request.notes, request.settings)
+      return closeAndSaveTabs(currentTabs, request.tag, request.category, request.notes)
     }
     case 'closeAllTabs': {
       const allTabs = await getTabs(false, true)
-      return closeAndSaveTabs(allTabs, request.tag, request.category, request.notes, request.settings)
+      return closeAndSaveTabs(allTabs, request.tag, request.category, request.notes)
     }
     case 'clearSelectedMarks': {
       return clearSelectedMarks(request.list)
@@ -222,26 +282,16 @@ browser.runtime.onMessage.addListener(async request => {
       return true
     }
     case 'removeMark': {
-      const list = await removeFromList(request.id)
-      await updateBadge(list.length ? list.length.toString() : null, request.settings)
-      return list
+      return removeMark(request.id)
     }
     case 'changeMark': {
-      const storage = await chrome.storage.sync.get(['bumarks'])
-      const bumarks = (storage.bumarks || []).map(b => {
-        if (b.id === request.id) {
-          b[request.name] = request.value
-        }
-        return b
-      })
-      await chrome.storage.sync.set({ bumarks })
-      return bumarks
+      return editMark(request.id, request.name, request.value)
     }
     case 'previewMark': {
       const activeTabs = await getTabs(true, true)
-      const actual = await fetchTabData(activeTabs[0], null, null, null, request.settings)
+      const actual = await fetchTabData(activeTabs[0], null, null, null)
       const allTabs = await getTabs(false, true)
-      const list = await fetchTabsData(allTabs, null, null, null, request.settings)
+      const list = await fetchTabsData(allTabs, null, null, null)
        return {
         actual,
         list: list.filter(f => f !== null),
@@ -254,8 +304,8 @@ browser.runtime.onMessage.addListener(async request => {
       return removeCategory(request.id)
     }
     case 'getInitialStorage': {
-      const storage = await chrome.storage.sync.get(['bumarks', 'settings', 'categories'])
-      const bumarks = storage.bumarks || []
+      const storage = await chrome.storage.sync.get(['settings', 'categories'])
+      const bumarks = await getBumarksList()
       const settings = storage.settings || {}
       const categories = storage.categories || []
       if (!arrayEquals(Object.keys(request.defaultSettings), Object.keys(settings))) {
@@ -263,7 +313,7 @@ browser.runtime.onMessage.addListener(async request => {
         Object.keys(newSett).forEach(k => settings[k] = newSett[k])
         await chrome.storage.sync.set({ settings })
       }
-      await updateBadge(bumarks.length ? bumarks.length.toString() : null, settings)
+      await updateBadge(bumarks.length ? bumarks.length.toString() : null)
       return {
         bumarks,
         settings,

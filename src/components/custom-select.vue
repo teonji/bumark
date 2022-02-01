@@ -104,25 +104,25 @@ const boxClass = val => {
 
 <template>
   <div class="relative">
-    <div class="flex items-center cursor-pointer tracking-wider text-white text-sm rounded leading-loose font-semibold border-2 min-h-[36px]"
+    <div class="max-w-[125px] h-[40px] flex items-center cursor-pointer tracking-wider text-white text-sm rounded leading-loose font-semibold border-2 min-h-[36px]"
          :class="[boxClass(innerValueData ? innerValueData.color : innerValue), category === 'color' ? 'px-4' : 'px-2', {'border-transparent': innerValue !== (innerValueData ? innerValueData.color : innerValue) }]"
          @click="toggle"
     >
       <i v-if="category !== 'color'" class="fas text-white" :class="[`fa-${innerValueData ? innerValueData.icon : innerValue}`, {'mr-2': innerValueData && innerValueData.label }]" aria-hidden="true" />
-      <span v-if="innerValueData">{{ innerValueData.label || '' }}</span>
+      <span v-if="innerValueData" class="max-w-[120px] h-[28px] truncate">{{ innerValueData.label || '' }}</span>
     </div>
-    <div v-if="opened" class="flex flex-wrap w-[400px] pt-2 absolute z-20">
+    <div v-if="opened" class="flex w-[350px] pt-2 absolute z-20" style="overflow: overlay">
       <div v-for="(item, k) in data"
             :key="k"
-            class="relative tracking-wider text-white text-sm rounded leading-loose font-semibold border-2 mb-2 mr-4 min-h-[36px]"
+            class="max-w-[125px] h-[40px] relative tracking-wider text-white text-sm rounded leading-loose font-semibold border-2 mb-2 mr-4 min-h-[36px]"
             :class="[boxClass(item.color || item), category === 'color' ? 'px-4' : 'px-3', category === 'icon' ? 'py-2 w-[36px]' : 'py-1', {'border-transparent': innerValue !== item.color || item, 'cursor-pointer': category === 'color' }]"
             @click="() => { if (category === 'color') { changeValue(item) } }"
       >
         <div @click="changeValue(item.hasOwnProperty('id') ? item.id : item)" class="flex items-center cursor-pointer">
           <i v-if="category !== 'color'" class="fas text-white" :class="[`fa-${item.icon || item}`, {'mr-2' : item.label}]" aria-hidden="true" />
-          <span v-if="item && item.label">{{ item.label || '' }}</span>
+          <span v-if="item && item.label" class="max-w-[120px] h-[28px] truncate">{{ item.label || '' }}</span>
         </div>
-        <i v-if="canRemove && item.hasOwnProperty('id') && item.id && item.id !== 'ADD'" class="absolute cursor-pointer top-[-14px] right-[-14px] fas fa-times-circle text-white" @click="remove(item.id)" aria-hidden="true" />
+        <i v-if="canRemove && item.hasOwnProperty('id') && item.id && item.id !== 'ADD'" class="absolute cursor-pointer top-[-8px] right-[-8px] fas fa-times-circle text-white" @click="remove(item.id)" aria-hidden="true" />
       </div>
     </div>
   </div>
