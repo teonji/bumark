@@ -398,7 +398,7 @@ export default {
       </div>
     </nav>
     <div id="action" class="container mx-auto bg-gray-800">
-      <template v-if="show === 'add'">
+      <template v-if="show === 'add' && loaded && (mark || (marks && marks.length))">
         <div class="flex items-center justify-center px-5">
           <div class="w-full max-w-md mx-auto h-[92px]">
             <div v-if="loaded" class="flex">
@@ -407,17 +407,17 @@ export default {
                      class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 group-hover:text-indigo-500"
                      :class="[!mark && loaded ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
                 >
-                    <span class="block px-1 pt-1 pb-1">
-                        <i class="far fa-flushed text-4xl pt-1 mb-1 block"></i>
-                        <span class="block text-xs pb-2">Close Current tab</span>
-                        <span v-if="mark && loaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
-                    </span>
+                  <span class="block px-1 pt-1 pb-1">
+                    <i class="far fa-window-close text-4xl pt-1 mb-1 block"></i>
+                    <span class="block text-xs pb-2">Close Current tab</span>
+                    <span v-if="mark && loaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
+                  </span>
                 </div>
               </div>
               <div v-if="marks && marks.length > (mark ? 1 : 0)" class="flex-1 group">
                 <button @click="closeAllTabs" class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 cursor-pointer group-hover:text-indigo-500">
                     <span class="block px-1 pt-1 pb-1">
-                      <i class="far fa-dizzy text-4xl pt-1 mb-1 block"></i>
+                      <i class="far fa-times-circle text-4xl pt-1 mb-1 block"></i>
                       <span class="block text-xs pb-2">Close All <span v-if="marks">{{ marks.length }}</span> tabs</span>
                       <span class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full"></span>
                     </span>
@@ -613,7 +613,14 @@ export default {
                 />
               </div>
               <div v-else class="flex items-center justify-center px-5 text-gray-400">
-                No preview available
+                <div class="relative flex flex-col p-4 text-gray-400 w-[380px] rounded">
+                  <div class="relative flex flex-col font-bold text-xl border border-gray-200 border-dashed rounded cursor-pointer">
+                    <div class="flex flex-col items-center justify-center py-10 text-center">
+                      <p class="m-0">No preview available.</p>
+                      <p class="mt-4">Open a tab and come back here to save it.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div v-else class="flex items-center justify-center px-5 text-gray-400">
@@ -664,7 +671,14 @@ export default {
             </template>
           </div>
           <div v-if="!listFiltered.length" class="flex items-center justify-center px-5 text-gray-400">
-            Nothing found
+            <div class="relative flex flex-col p-4 text-gray-400 w-[380px] rounded">
+              <div class="relative flex flex-col font-bold text-xl border border-gray-200 border-dashed rounded cursor-pointer">
+                <div class="flex flex-col items-center justify-center py-10 text-center">
+                  <p class="m-0" v-if="list.length">Nothing found.</p>
+                  <p class="m-0" v-else>Nothing found yet.</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
