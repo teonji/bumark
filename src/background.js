@@ -98,7 +98,7 @@ const fetchTabData = async (tab, tag, category, notes) => {
     metadata.id = `bumark_${crypto.randomUUID()}`
     metadata.category = category
     metadata.notes = notes
-    metadata.date = dayjs().format('YYYY-MM-DD hh:mm')
+    metadata.date = dayjs().format('YYYY-MM-DD HH:mm')
     metadata.tags = [tag, metadata.provider, dayjs().format('DD MMM YYYY')].filter(f => !!f)
     return metadata
   } catch (e) {

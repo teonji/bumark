@@ -1,7 +1,7 @@
 import qrcodeVue from 'qrcode.vue'
 import customSelect from '../components/custom-select.vue'
 import { ref } from 'vue'
-
+import dayjs from 'dayjs'
 export default {
   props: {
     id: {
@@ -83,6 +83,7 @@ export default {
       }, 2000)
     }
 
+    const time = dayjs(props.date).format('HH:mm')
     return {
       copied,
       openNotes,
@@ -93,6 +94,7 @@ export default {
       change,
       changeCategory,
       copy,
+      time,
     }
   }
 }

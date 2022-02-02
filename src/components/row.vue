@@ -1,6 +1,8 @@
 <script>
 import item from './item.js'
-export default item
+export default {
+  ...item,
+}
 </script>
 
 <template>

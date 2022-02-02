@@ -1,290 +1,359 @@
-<script setup>
+<script>
+import dayjs from 'dayjs'
+import timeView from '../components/time.vue'
+import rowView from '../components/row.vue'
+import cardView from '../components/card.vue'
 import customSelect from '../components/custom-select.vue'
-import { ref, shallowRef, reactive, computed, onMounted, defineAsyncComponent, } from 'vue'
-const defaultSettings = {
-  type: 'row',
-  category: null,
-}
-const emptyCategory = {
-  id: null,
-  label: 'None',
-  color: 'gray-500',
-  icon: 'ban',
-}
-const addCategory = {
-  id: 'ADD',
-  label: 'Add',
-  color: 'gray-500',
-  icon: 'plus',
-}
+import { ref, reactive, computed, onMounted, } from 'vue'
+export default {
+  components: {
+    timeView,
+    rowView,
+    cardView,
+    customSelect,
+  },
+  setup () {
+    const defaultSettings = {
+      type: 'row',
+      category: null,
+    }
+    const emptyCategory = {
+      id: null,
+      label: 'None',
+      color: 'gray-500',
+      icon: 'ban',
+    }
+    const addCategory = {
+      id: 'ADD',
+      label: 'Add',
+      color: 'gray-500',
+      icon: 'plus',
+    }
 
-const settings = reactive(defaultSettings)
-const copiedAll = ref(false)
-const reloading = ref(false)
-const list = ref([])
-const tag = ref('')
-const categories = ref([])
-const category = ref(undefined)
-const categoryFilter = ref(emptyCategory.id)
-const categoryAddMode = ref(false)
-const categoryToAdd = reactive({
-  label: '',
-  color: 'blue-500',
-  icon: 'ban',
-})
-const categorySelectOpen = ref(null)
-const notes = ref('')
-const search = ref('')
-const searchByTag = ref([])
-const show = ref('add') // add | list
-const scrollDesktopClass = ref(null)
-
-const mark = ref(null)
-const marks = ref(null)
-const loaded = ref(false)
-
-const settingsCategoriesToAdd = computed(() => {
-  return [
-    emptyCategory,
-    addCategory,
-    ...categories.value || [],
-  ]
-})
-
-const settingsCategories = computed(() => JSON.parse(JSON.stringify(settingsCategoriesToAdd.value)).filter(c => c.id !== 'ADD'))
-const settingsCategoriesFilters = computed(() => JSON.parse(JSON.stringify(settingsCategories.value)).map(c => {
-  if (!c.id) {
-    c.label = 'No Filter'
-  }
-  return c
-}))
-
-const searchInputRef = ref(null)
-const tagInputRef = ref(null)
-
-const typeView = shallowRef(defineAsyncComponent(() => import(`../components/${settings.type || 'row'}.vue`)))
-
-const listFiltered = computed(() => {
-  const categoryId = categoryFilter.value
-  const listData = list.value
-      .filter(l => searchByTag.value.length === 0 || l.tags.some(t => searchByTag.value.includes(t)))
-      .filter(l => !categoryId || l.category === categoryId)
-  if (search.value === '') {
-    return listData
-  }
-  return listData.filter(l => (l.title || '').toLowerCase().includes(search.value.toLowerCase())
-    || (l.description || '').toLowerCase().includes(search.value.toLowerCase())
-    || (l.provider || '').toLowerCase().includes(search.value.toLowerCase())
-    || (l.tags || []).includes(search.value.toLowerCase())
-    || (l.notes || '').includes(search.value.toLowerCase())
-    || (l.category || '').includes(search.value.toLowerCase())
-  )
-})
-
-const openSelectedMarks = async () => await browser.runtime.sendMessage({ type: 'openSelectedMarks', links: listFiltered.value.map(l => l.url) })
-const copySelectedMarks = () => {
-  navigator.clipboard.writeText(listFiltered.value.map(l => l.url).join("\n"))
-  copiedAll.value = true
-  setTimeout(() => {
-    copiedAll.value = false
-  }, 2000)
-}
-const openMark = async link => await browser.runtime.sendMessage({ type: 'openMark', link })
-
-const removeMark = async id => {
-  if (confirm('Are you sure you wanna remove this?')) {
-    list.value = await browser.runtime.sendMessage({ type: 'removeMark', id, })
-    clearTag()
-  }
-}
-
-const changeMark = async ({ id, name, value }) => {
-  list.value = await browser.runtime.sendMessage({
-    type: 'changeMark',
-    id,
-    name,
-    value,
-  })
-}
-
-const send = async (type, data = {}) => {
-  const newList = await browser.runtime.sendMessage({
-    type,
-    tag: tag.value,
-    category: category.value,
-    notes: notes.value,
-    ...data,
-  })
-  if (newList === 'ERROR_NOTHING') {
-    alert('Tab without url.')
-  } else {
-    list.value = newList
-    clearTag()
-  }
-}
-
-const clearTag = () => {
-  tag.value = ''
-}
-const closeCurrentTab = async () => {
-  if (mark.value && loaded.value) {
-    await send('closeCurrentTab')
-  }
-}
-const closeAllTabs = async () => {
-  if (confirm(`Are you sure you wanna close this ${marks.value.length} tab${marks.value.length > 1 ? 's' : ''}?`)) {
-    await send('closeAllTabs')
-    await reload()
-    show.value = 'list'
-  }
-}
-const clearSelectedMarks = async () => {
-  const listToClear = listFiltered.value.map(l => l.id)
-  if (confirm(`Are you sure you wanna clear this ${listToClear.length} tab${listToClear.length > 1 ? 's' : ''}?`)) {
-    await send('clearSelectedMarks', { list: listToClear })
-  }
-}
-const toggleTag = e => {
-  if (searchByTag.value.includes(e)) {
-    searchByTag.value = searchByTag.value.filter(t => t !== e)
-  } else {
-    searchByTag.value.push(e)
-  }
-}
-const openOptions = async () => await browser.runtime.sendMessage({ type: 'openOptions' })
-
-const setShow = e => {
-  show.value = e
-  setTimeout(() => {
-    if (e === 'add') {
-      if (!categoryAddMode.value && loaded.value && (mark.value || (marks.value && marks.value.length))) {
-        tagInputRef.value.focus()
+    const settings = reactive(defaultSettings)
+    const copiedAll = ref(false)
+    const reloading = ref(false)
+    const list = ref([])
+    const tag = ref('')
+    const categories = ref([])
+    const category = ref(undefined)
+    const categoryFilter = ref(emptyCategory.id)
+    const categoryAddMode = ref(false)
+    const categorySelectOpen = ref(null)
+    const notes = ref('')
+    const search = ref('')
+    const searchByTag = ref([])
+    const show = ref('add') // add | list
+    const scrollDesktopClass = ref(null)
+    const mark = ref(null)
+    const marks = ref(null)
+    const loaded = ref(false)
+    const searchInputRef = ref(null)
+    const tagInputRef = ref(null)
+    const type = ref('row')
+    const settingsCategoriesToAdd = computed(() => {
+      return [
+        emptyCategory,
+        addCategory,
+        ...categories.value || [],
+      ]
+    })
+    const settingsCategories = computed(() => JSON.parse(JSON.stringify(settingsCategoriesToAdd.value)).filter(c => c.id !== 'ADD'))
+    const settingsCategoriesFilters = computed(() => JSON.parse(JSON.stringify(settingsCategories.value)).map(c => {
+      if (!c.id) {
+        c.label = 'No Filter'
       }
-    } else if (e === 'list') {
-      searchInputRef.value.focus()
+      return c
+    }))
+    const listFiltered = computed(() => {
+      const categoryId = categoryFilter.value
+      const listData = list.value
+          .filter(l => searchByTag.value.length === 0 || l.tags.some(t => searchByTag.value.includes(t)))
+          .filter(l => !categoryId || l.category === categoryId)
+      if (search.value === '') {
+        return listData
+      }
+      return listData.filter(l => (l.title || '').toLowerCase().includes(search.value.toLowerCase())
+          || (l.description || '').toLowerCase().includes(search.value.toLowerCase())
+          || (l.provider || '').toLowerCase().includes(search.value.toLowerCase())
+          || (l.tags || []).includes(search.value.toLowerCase())
+          || (l.notes || '').includes(search.value.toLowerCase())
+          || (l.category || '').includes(search.value.toLowerCase())
+      )
+    })
+    const listFilteredGroupByDate = computed(() => {
+      const group = JSON.parse(JSON.stringify(listFiltered.value)).reduce(function(rv, x) {
+        const date = dayjs(x.date).format('YYYY-MM-DD');
+        (rv[date] = rv[date] || []).push(x)
+        return rv
+      }, {})
+      return Object.keys(group).map(k => ({
+        date: k,
+        formattedDate: dayjs(k).format('MMM DD, YYYY'),
+        list: group[k].map(l => {
+          l.time = dayjs(l.date).format('HH:mm')
+          return l
+        }),
+      }))
+    })
+    const categoryToAdd = reactive({
+      label: '',
+      color: 'blue-500',
+      icon: 'ban',
+    })
+
+    const today = dayjs().format('DD MMM YYYY')
+    const formatDate = date => {
+      const dateFormatted = dayjs(date).format('DD MMM YYYY')
+      return dateFormatted === today ? 'Today' : dateFormatted
     }
-  })
-}
-
-const changeTypeView = async component => {
-  try {
-    typeView.value = await defineAsyncComponent(() => import(`../components/${component}.vue`))
-    changeScrollDesktopClass()
-  } catch (e) {
-    alert(e.message)
-  }
-}
-
-const setSettings = async (type, value) => {
-  settings[type] = value
-  if (type === 'type') {
-    await changeTypeView(value)
-  }
-  await chrome.storage.sync.set({ settings, })
-}
-
-const changeCategory = val => {
-  category.value = val
-  if (val === 'ADD') {
-    categoryAddMode.value = !categoryAddMode.value
-  }
-}
-
-const changeCategoryFilter = val => {
-  categoryFilter.value = val
-}
-const clearAddCategory = () => {
-  categoryAddMode.value = !categoryAddMode.value
-  categoryToAdd.label = ''
-  categoryToAdd.icon = emptyCategory.icon
-  categoryToAdd.color = emptyCategory.color
-}
-
-const removeCategory = async id => {
-  const storage = await browser.runtime.sendMessage({ type: 'removeCategory', id, })
-  category.value = emptyCategory.id
-  categories.value = storage.categories
-  list.value = storage.list
-}
-
-const toggleCategorySelectOpen = type => {
-  if (type !== categorySelectOpen.value) {
-    categorySelectOpen.value = type
-  } else {
-    categorySelectOpen.value = null
-  }
-}
-const changeCategorySelectOpen = (type, data) => {
-  categoryToAdd[type] = data
-  categorySelectOpen.value = null
-}
-
-const toggleCancelCategory = async () => {
-  category.value = emptyCategory.id
-  clearAddCategory()
-}
-const toggleAddCategory = async () => {
-  const cat = categoryToAdd
-  cat.id = crypto.randomUUID()
-  const categoriesFromStorage = await browser.runtime.sendMessage({ type: 'addCategory', category: cat, })
-  category.value = cat.id
-  categories.value = categoriesFromStorage
-  clearAddCategory()
-}
-
-const changeScrollDesktopClass = () => {
-  if (document.body.scrollHeight !== 600 && document.body.scrollWidth !== 400) {
-    scrollDesktopClass.value = document.body.scrollHeight - document.getElementById('nav').clientHeight + document.getElementById('action').clientHeight - 120
-  }
-}
-
-const reload = async () => {
-  reloading.value = true
-  await previewMark()
-  await getInitialStorage()
-  changeScrollDesktopClass()
-  setTimeout(() => {
-    reloading.value = false
-  }, 1000)
-}
-
-const previewMark = async () => {
-  try {
-    const preview = await browser.runtime.sendMessage({ type: 'previewMark', })
-    mark.value = preview.actual
-    marks.value = preview.list
-    loaded.value = true
-    if (show.value !== 'list') {
+    const openSelectedMarks = async () => await browser.runtime.sendMessage({ type: 'openSelectedMarks', links: listFiltered.value.map(l => l.url) })
+    const copySelectedMarks = () => {
+      navigator.clipboard.writeText(listFiltered.value.map(l => l.url).join("\n"))
+      copiedAll.value = true
       setTimeout(() => {
-        if (tagInputRef.value) {
-          tagInputRef.value.focus()
-        }
-      }, 200)
+        copiedAll.value = false
+      }, 2000)
     }
-  } catch (e) {
-    alert(e)
+    const openMark = async link => await browser.runtime.sendMessage({ type: 'openMark', link })
+    const removeMark = async id => {
+      if (confirm('Are you sure you wanna remove this?')) {
+        list.value = await browser.runtime.sendMessage({ type: 'removeMark', id, })
+        clearTag()
+      }
+    }
+    const changeMark = async ({ id, name, value }) => {
+      list.value = await browser.runtime.sendMessage({
+        type: 'changeMark',
+        id,
+        name,
+        value,
+      })
+    }
+    const send = async (type, data = {}) => {
+      const newList = await browser.runtime.sendMessage({
+        type,
+        tag: tag.value,
+        category: category.value,
+        notes: notes.value,
+        ...data,
+      })
+      if (newList === 'ERROR_NOTHING') {
+        alert('Tab without url.')
+      } else {
+        list.value = newList
+        clearTag()
+      }
+    }
+    const clearTag = () => {
+      tag.value = ''
+    }
+    const closeCurrentTab = async () => {
+      if (mark.value && loaded.value) {
+        await send('closeCurrentTab')
+      }
+    }
+    const closeAllTabs = async () => {
+      if (confirm(`Are you sure you wanna close this ${marks.value.length} tab${marks.value.length > 1 ? 's' : ''}?`)) {
+        await send('closeAllTabs')
+        await reload()
+        show.value = 'list'
+      }
+    }
+    const clearSelectedMarks = async () => {
+      const listToClear = listFiltered.value.map(l => l.id)
+      if (confirm(`Are you sure you wanna clear this ${listToClear.length} tab${listToClear.length > 1 ? 's' : ''}?`)) {
+        await send('clearSelectedMarks', { list: listToClear })
+      }
+    }
+    const toggleTag = e => {
+      if (searchByTag.value.includes(e)) {
+        searchByTag.value = searchByTag.value.filter(t => t !== e)
+      } else {
+        searchByTag.value.push(e)
+      }
+    }
+    const openOptions = async () => await browser.runtime.sendMessage({ type: 'openOptions' })
+    const setShow = e => {
+      show.value = e
+      setTimeout(() => {
+        if (e === 'add') {
+          if (!categoryAddMode.value && loaded.value && (mark.value || (marks.value && marks.value.length))) {
+            tagInputRef.value.focus()
+          }
+        } else if (e === 'list') {
+          searchInputRef.value.focus()
+        }
+      })
+    }
+    const changeTypeView = async component => {
+      try {
+        type.value = component
+        changeScrollDesktopClass()
+      } catch (e) {
+        alert(e.message)
+      }
+    }
+    const setType = async value => {
+      await changeTypeView(value)
+      settings.type = value
+      await chrome.storage.sync.set({ settings, })
+    }
+    const changeCategory = val => {
+      category.value = val
+      if (val === 'ADD') {
+        categoryAddMode.value = !categoryAddMode.value
+      }
+    }
+    const changeCategoryFilter = val => {
+      categoryFilter.value = val
+    }
+    const clearAddCategory = () => {
+      categoryAddMode.value = !categoryAddMode.value
+      categoryToAdd.label = ''
+      categoryToAdd.icon = emptyCategory.icon
+      categoryToAdd.color = emptyCategory.color
+    }
+    const removeCategory = async id => {
+      const storage = await browser.runtime.sendMessage({ type: 'removeCategory', id, })
+      category.value = emptyCategory.id
+      categories.value = storage.categories
+      list.value = storage.list
+    }
+    const toggleCategorySelectOpen = type => {
+      if (type !== categorySelectOpen.value) {
+        categorySelectOpen.value = type
+      } else {
+        categorySelectOpen.value = null
+      }
+    }
+    const changeCategorySelectOpen = (type, data) => {
+      categoryToAdd[type] = data
+      categorySelectOpen.value = null
+    }
+    const toggleCancelCategory = async () => {
+      category.value = emptyCategory.id
+      clearAddCategory()
+    }
+    const toggleAddCategory = async () => {
+      const cat = categoryToAdd
+      cat.id = crypto.randomUUID()
+      const categoriesFromStorage = await browser.runtime.sendMessage({ type: 'addCategory', category: cat, })
+      category.value = cat.id
+      categories.value = categoriesFromStorage
+      clearAddCategory()
+    }
+    const changeScrollDesktopClass = () => {
+      if (document.body.scrollHeight !== 600 && document.body.scrollWidth !== 400) {
+        scrollDesktopClass.value = document.body.scrollHeight - document.getElementById('nav').clientHeight + document.getElementById('action').clientHeight - 120
+      }
+    }
+    const reload = async () => {
+      reloading.value = true
+      await previewMark()
+      await getInitialStorage()
+      changeScrollDesktopClass()
+      setTimeout(() => {
+        reloading.value = false
+      }, 1000)
+    }
+    const previewMark = async () => {
+      try {
+        const preview = await browser.runtime.sendMessage({ type: 'previewMark', })
+        mark.value = preview.actual
+        marks.value = preview.list
+        loaded.value = true
+        if (show.value !== 'list') {
+          setTimeout(() => {
+            if (tagInputRef.value) {
+              tagInputRef.value.focus()
+            }
+          }, 200)
+        }
+      } catch (e) {
+        alert(e)
+      }
+    }
+    const getInitialStorage = async () => {
+      try {
+        const { bumarks, settings: settingsFromStorage, categories: categoriesFromStorage } = await browser.runtime.sendMessage({ type: 'getInitialStorage', defaultSettings })
+        list.value = bumarks
+        categories.value = categoriesFromStorage
+        Object.keys(settingsFromStorage).forEach(k => settings[k] = settingsFromStorage[k])
+        category.value = settingsFromStorage.category || null
+        await changeTypeView(settingsFromStorage.type)
+      } catch (e) {
+        alert(e)
+      }
+    }
+    onMounted(async () => {
+      if (location.search === '?show=list') {
+        show.value = 'list'
+      }
+      await reload()
+    })
+
+    return {
+      settings,
+      copiedAll,
+      reloading,
+      list,
+      tag,
+      categories,
+      category,
+      categoryFilter,
+      categoryAddMode,
+      categorySelectOpen,
+      notes,
+      search,
+      searchByTag,
+      show,
+      scrollDesktopClass,
+      mark,
+      marks,
+      loaded,
+      searchInputRef,
+      tagInputRef,
+      type,
+
+      settingsCategoriesToAdd,
+      settingsCategories,
+      settingsCategoriesFilters,
+      listFiltered,
+      listFilteredGroupByDate,
+      categoryToAdd,
+
+      formatDate,
+      openSelectedMarks,
+      copySelectedMarks,
+      openMark,
+      removeMark,
+      changeMark,
+      send,
+      clearTag,
+      closeCurrentTab,
+      closeAllTabs,
+      clearSelectedMarks,
+      toggleTag,
+      openOptions,
+      setShow,
+      changeTypeView,
+      setType,
+      changeCategory,
+      changeCategoryFilter,
+      clearAddCategory,
+      removeCategory,
+      toggleCategorySelectOpen,
+      changeCategorySelectOpen,
+      toggleCancelCategory,
+      toggleAddCategory,
+      changeScrollDesktopClass,
+      reload,
+      previewMark,
+      getInitialStorage,
+    }
   }
 }
-
-const getInitialStorage = async () => {
-  try {
-    const { bumarks, settings: settingsFromStorage, categories: categoriesFromStorage } = await browser.runtime.sendMessage({ type: 'getInitialStorage', defaultSettings })
-    list.value = bumarks
-    categories.value = categoriesFromStorage
-    Object.keys(settingsFromStorage).forEach(k => settings[k] = settingsFromStorage[k])
-    category.value = settingsFromStorage.category || null
-    await changeTypeView(settingsFromStorage.type)
-  } catch (e) {
-    alert(e)
-  }
-}
-
-onMounted(async () => {
-  if (location.search === '?show=list') {
-    show.value = 'list'
-  }
-  await reload()
-})
 </script>
 
 <template>
@@ -395,10 +464,10 @@ onMounted(async () => {
         <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex justify-between items-center mb-3">
           <span class="text-white ml-3 text-2xl">Preview</span>
           <ul class="flex justify-end mr-3">
-            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
+            <li @click="setType('row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' || settings.type === 'time' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-stream text-xl pt-1 mb-1 block" />
             </li>
-            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
+            <li @click="setType('card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-th-large text-xl pt-1 mb-1 block" />
             </li>
           </ul>
@@ -503,11 +572,14 @@ onMounted(async () => {
             />
           </div>
           <ul v-if="loaded" class="flex justify-end mr-3">
-            <li @click="setSettings('type', 'row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
+            <li @click="setType('row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-stream text-xl pt-1 mb-1 block" />
             </li>
-            <li @click="setSettings('type', 'card')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
+            <li @click="setType('card')" class="px-2 cursor-pointer" :class="[settings.type === 'card' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-th-large text-xl pt-1 mb-1 block" />
+            </li>
+            <li @click="setType('time')" class="px-2 rounded-r-lg cursor-pointer" :class="[settings.type === 'time' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
+              <i class="far fa-clock text-xl pt-1 mb-1 block" />
             </li>
           </ul>
         </div>
@@ -525,12 +597,12 @@ onMounted(async () => {
       <div class="2xl:container mx-auto">
         <div v-if="show === 'add'">
           <div v-if="!categoryAddMode && mark && loaded" class="grid grid-cols-1 gap-1 container m-auto px-3 pb-3">
-            <component :is="typeView" v-bind="mark" :settings="settings" class="pb-4" />
+            <component :is="`${type}View`" v-bind="mark" :settings="settings" class="pb-4" />
           </div>
           <div v-else-if="!categoryAddMode">
             <div v-if="loaded">
               <div v-if="marks && marks.length" class="grid grid-cols-1 lg:gap-3 gap-1 px-3 sm:grid-cols-3">
-                <component :is="typeView"
+                <component :is="`${type === 'time' ? 'row' : type}View`"
                            v-for="(l, i) in marks"
                            :key="`mark-${i}`"
                            v-bind="l"
@@ -550,10 +622,10 @@ onMounted(async () => {
           </div>
         </div>
         <div v-if="show === 'list'" class="mt-4">
-          <div class="grid grid-cols-1 2xl:gap-3 gap-1 px-3 2xl:grid-cols-3">
-            <component :is="typeView"
-                       v-for="(l, i) in listFiltered"
-                       :key="`mark-${i}`"
+          <div v-if="type !== 'time'" class="grid grid-cols-1 2xl:gap-3 gap-1 px-3 2xl:grid-cols-3">
+            <component :is="`${type}View`"
+                       v-for="l in listFiltered"
+                       :key="`mark-${type}-${l.id}`"
                        v-bind="l"
                        can-edit
                        :settings="settings"
@@ -563,6 +635,33 @@ onMounted(async () => {
                        @change="changeMark"
                        @tag="toggleTag"
             />
+          </div>
+          <div v-else class="px-4">
+            <template v-for="g in listFilteredGroupByDate" :key="g.date">
+              <div class="2xl:pb-4 pb-2 2xl:px-4 px-2 2xl:my-4 my-2 bg-white rounded-md w-full bg-white">
+                <div class="flex justify-between w-full pt-6 ">
+                  <div class="font-extrabold text-2xl m-auto">{{ formatDate(g.date) }}</div>
+                </div>
+                <div class="overflow-x-auto mt-6">
+                  <table class="table-auto border-collapse w-full">
+                    <tbody class="text-sm font-normal text-gray-700">
+                      <component :is="'timeView'"
+                                 v-for="l in g.list"
+                                 :key="`mark-${type}-${l.id}`"
+                                 v-bind="l"
+                                 can-edit
+                                 :settings="settings"
+                                 :categories="settingsCategories"
+                                 @open="openMark"
+                                 @remove="removeMark"
+                                 @change="changeMark"
+                                 @tag="toggleTag"
+                      />
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </template>
           </div>
           <div v-if="!listFiltered.length" class="flex items-center justify-center px-5 text-gray-400">
             Nothing found
