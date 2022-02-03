@@ -359,7 +359,10 @@ export default {
 <template>
   <div class="bg-gray-800 sm:h-screen overflow-hidden">
     <nav id="nav" class="bg-white w-full flex justify-between items-center mx-auto px-4 h-16">
-      <img src="/logo.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
+      <div class="flex justify-center items-center">
+        <img src="/logo.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
+        <span class="font-bold text-2xl">BUMARK</span>
+      </div>
       <div v-if="show === 'list'" class="w-full mx-auto ml-3">
         <div class="hidden sm:block relative text-gray-600 focus-within:text-gray-400">
           <span class="absolute inset-y-0 left-0 flex items-center pl-4">
@@ -381,7 +384,7 @@ export default {
           >
             <i class="far fa-plus text-xl pt-1 mb-1 block" />
           </button>
-          <button @click="setShow('list')"
+          <button v-if="list && list.length" @click="setShow('list')"
                   type="button"
                   class="w-[44px] h-[44px] flex inline-block py-1 px-3 rounded-full relative ml-2"
                   :class="[show === 'list' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-black' ]"
