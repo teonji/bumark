@@ -79,7 +79,8 @@ export default {
       </div>
     </div>
     <div v-if="openQrCode">
-      <qrcode-vue class="m-auto mt-[60px]" :value="url" :size="360" level="H" />
+      <qrcode-vue class="hidden 2xl:table-cell m-auto mt-[60px]" :value="url" :size="360" level="H" />
+      <qrcode-vue class="table-cell 2xl:hidden m-auto mt-[60px]" :value="url" :size="260" level="H" />
     </div>
   </div>
 </template>

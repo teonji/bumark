@@ -287,7 +287,7 @@ export default {
       }
     }
     onMounted(async () => {
-      if (location.search === '?show=list') {
+      if (list.value.length && location.search === '?show=list') {
         show.value = 'list'
       }
       await reload()
