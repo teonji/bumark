@@ -360,7 +360,7 @@ export default {
   <div class="bg-gray-800 sm:h-screen overflow-hidden">
     <nav id="nav" class="bg-white w-full flex justify-between items-center mx-auto px-4 h-16">
       <div class="flex justify-center items-center">
-        <img src="/logo.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
+        <img src="/logo-transparent.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
         <span class="font-bold text-2xl">BUMARK</span>
       </div>
       <div v-if="show === 'list'" class="w-full mx-auto ml-3">
@@ -411,7 +411,7 @@ export default {
                      :class="[!mark && loaded ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
                 >
                   <span class="block px-1 pt-1 pb-1">
-                    <i class="far fa-window-close text-4xl pt-1 mb-1 block"></i>
+                    <img src="/logo-single-transparent.png" class="m-auto h-[50px] w-[50px] object-cover rounded-2xl" />
                     <span class="block text-xs pb-2">Close Current tab</span>
                     <span v-if="mark && loaded" class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full" />
                   </span>
@@ -420,7 +420,7 @@ export default {
               <div v-if="marks && marks.length > (mark ? 1 : 0)" class="flex-1 group">
                 <button @click="closeAllTabs" class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 cursor-pointer group-hover:text-indigo-500">
                     <span class="block px-1 pt-1 pb-1">
-                      <i class="far fa-times-circle text-4xl pt-1 mb-1 block"></i>
+                      <img src="/logo-transparent.png" class="m-auto h-[50px] w-[50px] object-cover rounded-2xl" />
                       <span class="block text-xs pb-2">Close All <span v-if="marks">{{ marks.length }}</span> tabs</span>
                       <span class="block w-5 mx-auto h-1 group-hover:bg-indigo-500 rounded-full"></span>
                     </span>

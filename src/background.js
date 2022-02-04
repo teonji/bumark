@@ -109,7 +109,7 @@ const fetchTabData = async (tab, tag, category, notes) => {
 const updateBadge = async text => {
   try {
     await chrome.action.setBadgeText({ text: text || '' })
-    await chrome.action.setBadgeBackgroundColor({ color: 'green' })
+    await chrome.action.setBadgeBackgroundColor({ color: 'blue' })
   } catch (e) {
     return e.message
   }
