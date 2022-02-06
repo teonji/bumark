@@ -37,7 +37,7 @@ export default {
     <div v-if="!openNotes && !openQrCode" class="p-8">
       <div class="justify-between flex">
         <div>
-          <h5 @click="open" class="text-xl font-bold text-gray-100 pb-4" :class="{ 'cursor-pointer': canEdit }">
+          <h5 @click="open" class="text-xl font-display font-bold text-gray-100 pb-4" :class="{ 'cursor-pointer': canEdit }">
             {{ title }}
           </h5>
         </div>

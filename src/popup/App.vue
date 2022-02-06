@@ -361,10 +361,10 @@ export default {
     <nav id="nav" class="bg-white w-full flex justify-between items-center mx-auto px-4 h-16">
       <div class="flex justify-center items-center">
         <img src="/logo-transparent.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
-        <span class="font-bold text-2xl">BUMARK</span>
+        <span class="font-bold text-2xl font-display">BUMARK</span>
       </div>
       <div v-if="show === 'list'" class="w-full mx-auto ml-3">
-        <div class="hidden sm:block relative text-gray-600 focus-within:text-gray-400">
+        <div class="hidden sm:block relative font-display text-gray-600 focus-within:text-gray-400">
           <span class="absolute inset-y-0 left-0 flex items-center pl-4">
             <i class="fas fa-search"></i>
           </span>
@@ -407,7 +407,7 @@ export default {
             <div v-if="loaded" class="flex">
               <div class="flex-1 group" v-if="mark">
                 <div @click="closeCurrentTab"
-                     class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 group-hover:text-indigo-500"
+                     class="flex items-end justify-center text-center font-display mx-auto px-4 pt-2 w-full text-gray-400 group-hover:text-indigo-500"
                      :class="[!mark && loaded ? 'text-gray-700 group-hover:text-gray-700' : 'cursor-pointer']"
                 >
                   <span class="block px-1 pt-1 pb-1">
@@ -418,7 +418,7 @@ export default {
                 </div>
               </div>
               <div v-if="marks && marks.length > (mark ? 1 : 0)" class="flex-1 group">
-                <button @click="closeAllTabs" class="flex items-end justify-center text-center mx-auto px-4 pt-2 w-full text-gray-400 cursor-pointer group-hover:text-indigo-500">
+                <button @click="closeAllTabs" class="flex items-end justify-center text-center font-display mx-auto px-4 pt-2 w-full text-gray-400 cursor-pointer group-hover:text-indigo-500">
                     <span class="block px-1 pt-1 pb-1">
                       <img src="/logo-transparent.png" class="m-auto h-[50px] w-[50px] object-cover rounded-2xl" />
                       <span class="block text-xs pb-2">Close All <span v-if="marks">{{ marks.length }}</span> tabs</span>
@@ -465,7 +465,7 @@ export default {
         </div>
 
         <div v-if="!categoryAddMode && loaded && (mark || (marks && marks.length))" class="flex justify-between items-center mb-3">
-          <span class="text-white ml-3 text-2xl">Preview</span>
+          <span class="text-white ml-3 font-display text-2xl">Preview</span>
           <ul class="flex justify-end mr-3">
             <li @click="setType('row')" class="px-2 rounded-l-lg cursor-pointer" :class="[settings.type === 'row' || settings.type === 'time' ? 'bg-blue-400 hover:bg-blue-500 text-white' : 'hover:bg-gray-200 bg-white']">
               <i class="far fa-stream text-xl pt-1 mb-1 block" />
@@ -541,7 +541,7 @@ export default {
                   :class="[copiedAll ? 'bg-green-500 text-white hover:text-white hover:bg-green-500' : 'text-white bg-blue-400 hover:bg-blue-500']">
             <i class="fas fa-copy"></i>
             <span v-if="copiedAll" class="ml-2">Copied</span>
-            <span v-else class="flex justify-between items-center ml-2">
+            <span v-else class="flex justify-between items-center font-display ml-2">
               <span>Copy</span>
               <span class="hidden sm:block ml-1">
                 {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}
@@ -550,7 +550,7 @@ export default {
           </button>
           <button @click="openSelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center text-white bg-green-400 hover:bg-green-500">
             <i class="fas fa-external-link-alt"></i>
-            <span class="flex justify-between items-center ml-2">
+            <span class="flex justify-between items-center font-display ml-2">
               Open
               <span class="hidden sm:block ml-1">
                 {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}
@@ -559,7 +559,7 @@ export default {
           </button>
           <button @click="clearSelectedMarks" type="button" class="ml-3 rounded-md p-2 inline-flex items-center justify-center text-white bg-red-400 hover:bg-red-500">
             <i class="fas fa-trash"></i>
-            <span class="flex justify-between items-center ml-2">
+            <span class="flex justify-between items-center font-display ml-2">
               Clear
               <span class="hidden sm:block ml-1">
                 {{ listFiltered.length > 1 ? 'all' : '' }} {{ listFiltered.length }} url{{ listFiltered.length > 1 ? 's' : '' }}

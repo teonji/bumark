@@ -31,7 +31,7 @@ export default {
       <div class="flex items-center">
         <img :src="icon || '/logo.png'" class="2xl:mx-4 mr-4 bg-gray-200 w-[20px] h-[20px] 2xl:w-[50px] 2xl:h-[50px]">
         <div v-if="!openNotes">
-          <div class="font-bold 2xl:text-xl">{{ title }}</div>
+          <div class="font-bold 2xl:text-xl font-display">{{ title }}</div>
           <div class="hidden 2xl:table-cell">{{ description }}</div>
         </div>
         <div v-else>
