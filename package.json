@@ -1,6 +1,6 @@
 {
   "name": "bumark",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "private": true,
   "scripts": {
     "serve": "cross-env TAILWIND_MODE=watch vue-cli-service build --mode development --watch",
