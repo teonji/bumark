@@ -45,15 +45,11 @@ export default {
               />
             </div>
           </div>
-          <div class="flex-auto ml-5">
-            <div @click="open" v-if="title || description" class="flex items-center justify-between mt-2 mb-2" :class="{ 'cursor-pointer': canEdit }">
-              <div class="flex items-center">
-                <div class="flex flex-col w-[180px] sm:w-[450px] 2xl:w-[300px]">
-                  <div v-if="title" class="w-full flex-none text-lg font-display text-gray-800 font-bold leading-none sm:h-[55px] overflow-ellipsis overflow-hidden">{{ title }}</div>
-                  <div class="flex-auto text-gray-500 my-1 sm:h-[110px] overflow-ellipsis overflow-hidden">
-                    <span class="mr-3">{{ description || '(No description)' }}</span>
-                  </div>
-                </div>
+          <div @click="open" v-if="title || description" :class="{ 'cursor-pointer': canEdit }" class="flex-auto ml-5">
+            <div class="flex flex-col w-[180px] sm:w-[450px] 2xl:w-[300px]">
+              <div v-if="title" class="w-full flex-none text-lg font-display text-gray-800 font-bold leading-none h-[55px] overflow-ellipsis overflow-hidden">{{ title }}</div>
+              <div class="flex-auto text-gray-500 my-1 h-[110px] overflow-ellipsis overflow-hidden">
+                {{ description || '(No description)' }}
               </div>
             </div>
           </div>
