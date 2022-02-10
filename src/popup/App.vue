@@ -361,7 +361,7 @@ export default {
     <nav id="nav" class="bg-white w-full flex justify-between items-center mx-auto px-4 h-16">
       <div class="flex justify-center items-center">
         <img src="/logo-transparent.png" class="h-[50px] w-[50px] object-cover rounded-2xl">
-        <span class="font-bold text-2xl font-display">BUMARK</span>
+        <span class="text-2xl font-display">BUMARK</span>
       </div>
       <div v-if="show === 'list'" class="w-full mx-auto ml-3">
         <div class="hidden sm:block relative font-display text-gray-600 focus-within:text-gray-400">

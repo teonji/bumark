@@ -34,7 +34,7 @@ const fetchTabData = async (tab, tag, category, notes) => {
         }
 
         const hostSplit = document.location.hostname.split('.')
-        const provider = hostSplit[hostSplit.length - 2]
+        const provider = hostSplit[hostSplit.length - 2] !== 'co' ? hostSplit[hostSplit.length - 2] : hostSplit[hostSplit.length - 3]
 
         const url = `${window.location.origin}/`
 
