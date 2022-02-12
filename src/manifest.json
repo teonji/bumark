@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "__MSG_extName__",
   "homepage_url": "http://localhost:8080/",
-  "description": "Simple temporary bookmark extension",
+  "description": "not a simply bookmark app.",
   "default_locale": "en",
   "permissions": [
     "storage",
